@@ -3,7 +3,7 @@ from __future__ import (absolute_import, division, print_function, unicode_liter
 from .supervised_learner import SupervisedLearner
 from .matrix import Matrix
 import numpy as np
-
+import matplotlib.pyplot as plt
 
 class PerceptronLearner(SupervisedLearner):
     MAX_EPOCHS = 3 
@@ -27,9 +27,8 @@ class PerceptronLearner(SupervisedLearner):
         # print('Updated weights: ', self.weights)
 
     # Sum(w_i*x_i)
-    # This will use the latest weight vector in self.weights
-    def calcNet(self, pattern):
-        net = (self.weights * pattern).sum()
+    def calcNet(self, pattern, weights):
+        net = (weights * pattern).sum()
         # print("Net: ", net)
         return net
 
@@ -48,7 +47,6 @@ class PerceptronLearner(SupervisedLearner):
         # Train over several epochs. Remember, an epoch is an iteration over the whole training set
         for e in range(self.MAX_EPOCHS):
             print("Epoch " + str(e))
-            # Should not need to iterate through instances due to broadcasting?... Not sure how though
             for i in range(features.rows):
                 self.trainModel(features.row(i), labels.row(i)[0])
 
@@ -57,13 +55,37 @@ class PerceptronLearner(SupervisedLearner):
             print('accuracy: ', accuracy)
             # TODO: If accuracy stalls for STALL_NUM_EPOCHS, break
 
+        self.plotSeparability(self.weights, features, labels)
+
+
+    def plotSeparability(self, weights, features, labels):
+        # plot points
+        class1_x, class2_x, class1_y, class2_y = [], [], [], []
+        for r in range(features.rows):
+            if(labels.row(r)[0] == 0):
+                class1_x.append(features.get(r, 0))
+                class1_y.append(features.get(r, 1))
+            else:
+                class2_x.append(features.get(r, 0))
+                class2_y.append(features.get(r, 1))
+        plt.plot(class1_x, class1_y, 'bs')
+        plt.plot(class2_x, class2_y, 'g^')
+        # plot decision line
+        m = -weights[0]/weights[1]
+        b = weights[2]/weights[1]
+        xs = np.array([features.column_min(0), features.column_max(0)])
+        ys = m*xs + b
+        plt.plot(xs, ys)
+        
+        plt.show()
+    
     def predictOne(self, instance):
         """
         @return: a tuple: (the instance with bias appended, the prediction for that instance)
         """
         pattern = np.append(np.array(instance), 1) #include a bias
         # print('Pattern w/ bias: ', pattern)
-        net = self.calcNet(pattern)
+        net = self.calcNet(pattern, self.weights)
         pred = 1.0 if (net > 0) else 0.0
         # self.labels.append(pred)
         return (pattern, pred)
