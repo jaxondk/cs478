@@ -6,7 +6,7 @@ import numpy as np
 
 
 class PerceptronLearner(SupervisedLearner):
-    MAX_EPOCHS = 25 
+    MAX_EPOCHS = 3 
     STALL_NUM_EPOCHS = 5
     LEARNING_RATE = .1
     labels = []
@@ -17,29 +17,24 @@ class PerceptronLearner(SupervisedLearner):
 
     def initWeights(self, numFeatures):
         self.weights = np.zeros(numFeatures+1) #+1 for bias weight
-        print('Initial weights: ', self.weights)
+        # print('Initial weights: ', self.weights)
 
     # Change in weights = c(t-z)x_i
     def updateWeights(self, pattern, label, out):
         change = self.LEARNING_RATE * (label - out) * pattern
-        print('Change in weights: ', change)
+        # print('Change in weights: ', change)
         self.weights += change
-        print('Updated weights: ', self.weights)
+        # print('Updated weights: ', self.weights)
 
     # Sum(w_i*x_i)
+    # This will use the latest weight vector in self.weights
     def calcNet(self, pattern):
         net = (self.weights * pattern).sum()
-        print("Net: ", net)
+        # print("Net: ", net)
         return net
 
     def trainModel(self, instance, label):
-        pattern = np.array(instance)
-        pattern = np.append(pattern, 1) #include a bias
-        print('Pattern + bias: ', pattern)
-        net = self.calcNet(pattern)
-        # Fire perceptron?
-        out = 1.0 if (net > 0) else 0.0
-        self.labels.append(out)
+        pattern, out = self.predictOne(instance)
         self.updateWeights(pattern, label, out)
 
     def train(self, features, labels):
@@ -49,9 +44,6 @@ class PerceptronLearner(SupervisedLearner):
         """
         self.labels = []
         self.initWeights(features.cols)
-        # labels.print()
-        # print('-------------------------')
-        # features.print()
 
         # Train over several epochs. Remember, an epoch is an iteration over the whole training set
         for e in range(self.MAX_EPOCHS):
@@ -60,15 +52,27 @@ class PerceptronLearner(SupervisedLearner):
             for i in range(features.rows):
                 self.trainModel(features.row(i), labels.row(i)[0])
 
-            # TODO: check accuracy. If accuracy stalls for STALL_NUM_EPOCHS, break
+            # TODO: check accuracy. 
+            accuracy = self.measure_accuracy(features, labels)
+            print('accuracy: ', accuracy)
+            # TODO: If accuracy stalls for STALL_NUM_EPOCHS, break
 
-    def predict(self, features, labels):
+    def predictOne(self, instance):
         """
-        :type features: [float]
-        :type labels: [float]
+        @return: a tuple: (the instance with bias appended, the prediction for that instance)
         """
-        del labels[:]
-        labels += self.labels
+        pattern = np.append(np.array(instance), 1) #include a bias
+        # print('Pattern w/ bias: ', pattern)
+        net = self.calcNet(pattern)
+        pred = 1.0 if (net > 0) else 0.0
+        # self.labels.append(pred)
+        return (pattern, pred)
 
-
-
+    def predict(self, featureRow, pred):
+        """
+        :type featureRow: [float]
+        :type pred: [float] - The manager is expecting an array, but it will be an array of length 1 containing the one prediction
+        """
+        del pred[:]
+        _, out = self.predictOne(featureRow)
+        pred.append(out)
