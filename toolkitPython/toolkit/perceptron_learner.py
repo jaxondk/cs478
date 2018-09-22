@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class PerceptronLearner(SupervisedLearner):
-    MAX_EPOCHS = 3 
+    MAX_EPOCHS = 15 
     STALL_NUM_EPOCHS = 5
     LEARNING_RATE = .1
     labels = []
@@ -45,15 +45,24 @@ class PerceptronLearner(SupervisedLearner):
         self.initWeights(features.cols)
 
         # Train over several epochs. Remember, an epoch is an iteration over the whole training set
+        prev_accuracy = 0.0
+        noImprovementCount = 0
         for e in range(self.MAX_EPOCHS):
             print("Epoch " + str(e))
             for i in range(features.rows):
                 self.trainModel(features.row(i), labels.row(i)[0])
 
-            # TODO: check accuracy. 
+            # Calc accuracy and check if it has stalled
             accuracy = self.measure_accuracy(features, labels)
             print('accuracy: ', accuracy)
-            # TODO: If accuracy stalls for STALL_NUM_EPOCHS, break
+            if(accuracy == prev_accuracy):
+                noImprovementCount += 1
+            else:
+                noImprovementCount = 0
+            if(noImprovementCount == self.STALL_NUM_EPOCHS):
+                print('Accuracy has stalled for {0} epochs, ending training'.format(self.STALL_NUM_EPOCHS))
+                break
+            prev_accuracy = accuracy
 
         self.plotSeparability(self.weights, features, labels)
 
@@ -76,7 +85,6 @@ class PerceptronLearner(SupervisedLearner):
         xs = np.array([features.column_min(0), features.column_max(0)])
         ys = m*xs + b
         plt.plot(xs, ys)
-        
         plt.show()
     
     def predictOne(self, instance):
