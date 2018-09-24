@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 class PerceptronLearner(SupervisedLearner):
     MAX_EPOCHS = 15 
     STALL_NUM_EPOCHS = 5
-    LEARNING_RATE = .1
+    LEARNING_RATE = .75
     labels = []
     weights = []
 
@@ -64,7 +64,7 @@ class PerceptronLearner(SupervisedLearner):
                 break
             prev_accuracy = accuracy
 
-        self.plotSeparability(self.weights, features, labels)
+        # self.plotSeparability(self.weights, features, labels)
 
 
     def plotSeparability(self, weights, features, labels):
@@ -85,6 +85,9 @@ class PerceptronLearner(SupervisedLearner):
         xs = np.array([features.column_min(0), features.column_max(0)])
         ys = m*xs + b
         plt.plot(xs, ys)
+        # plt.title('Linearly Separable Data')
+        plt.xlabel('Feature 1')
+        plt.ylabel('Feature 2')
         plt.show()
     
     def predictOne(self, instance):

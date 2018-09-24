@@ -1,13 +1,13 @@
-@relation linearlySeparable
+@relation linearlyInseparable
 @attribute a1 real
 @attribute a2 real
 @attribute class {0,1}
 @data
 -0.35, 0.0, 1
--0.3, -0.1, 1
+-0.3, -0.1, 0
 0.3, 0.5, 1
-0.0, 0.1, 1
+0.0, 0.1, 0
 0.1, -0.29, 0
-0.2, -0.2, 0
+0.2, -0.2, 1
 0.3, 0.2, 0
-0.0, -0.6, 0
+0.0, -0.6, 1
