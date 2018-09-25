@@ -5,11 +5,10 @@ from .matrix import Matrix
 import numpy as np
 import matplotlib.pyplot as plt
 
-class PerceptronLearner(SupervisedLearner):
+class MultiPerceptronLearner(SupervisedLearner):
     MAX_EPOCHS = 20 
     STALL_NUM_EPOCHS = 5
     LEARNING_RATE = .1
-    labels = []
     weights = []
 
     def __init__(self):
@@ -41,13 +40,11 @@ class PerceptronLearner(SupervisedLearner):
         :type features: Matrix
         :type labels: Matrix
         """
+        self.labels = []
         self.initWeights(features.cols)
 
-        # Train over several epochs. Remember, an epoch is an iteration over the whole training set
         prev_accuracy = 0.0
         noImprovementCount = 0
-        # avgMisclassRate = []
-        # totalMisclass = 0.0
         for e in range(self.MAX_EPOCHS):
             # print("Epoch " + str(e))
             for i in range(features.rows):
@@ -55,10 +52,7 @@ class PerceptronLearner(SupervisedLearner):
 
             # Calc accuracy and check if it has stalled
             accuracy = self.measure_accuracy(features, labels)
-            # totalMisclass += (1 - accuracy)
-            # avgMisclassRate.append(totalMisclass/(e+1))
-            # print('misclass: ', (1-accuracy))
-            print('accuracy: ', accuracy)
+            # print('accuracy: ', accuracy)
             if(accuracy <= prev_accuracy):
                 noImprovementCount += 1
             else:
@@ -69,40 +63,6 @@ class PerceptronLearner(SupervisedLearner):
                 break
             
             features.shuffle(buddy=labels)
-
-        # print('final weight vector: ', self.weights)
-        # self.plotSeparability(self.weights, features, labels)
-        # self.plotMisclassification(avgMisclassRate)
-
-    def plotMisclassification(self, avgMissclassRate):
-        plt.plot(range(self.MAX_EPOCHS), avgMissclassRate)
-        plt.xlabel('Epoch')
-        plt.ylabel('Avg. Misclassification Rate')
-        plt.title('Avg. Misclassification Rate vs. Epoch')
-        plt.show()
-
-    def plotSeparability(self, weights, features, labels):
-        # plot points
-        class1_x, class2_x, class1_y, class2_y = [], [], [], []
-        for r in range(features.rows):
-            if(labels.row(r)[0] == 0):
-                class1_x.append(features.get(r, 0))
-                class1_y.append(features.get(r, 1))
-            else:
-                class2_x.append(features.get(r, 0))
-                class2_y.append(features.get(r, 1))
-        plt.plot(class1_x, class1_y, 'bs')
-        plt.plot(class2_x, class2_y, 'g^')
-        # plot decision line
-        m = -weights[0]/weights[1]
-        b = weights[2]/weights[1]
-        xs = np.array([features.column_min(0), features.column_max(0)])
-        ys = m*xs + b
-        plt.plot(xs, ys)
-        # plt.title('Linearly Separable Data')
-        plt.xlabel('Feature 1')
-        plt.ylabel('Feature 2')
-        plt.show()
     
     def predictOne(self, instance):
         """
