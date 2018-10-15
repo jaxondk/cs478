@@ -181,6 +181,11 @@ class Matrix:
         """Set the value at the specified row and column"""
         self.data[row][col] = val
 
+    def setCol(self, col, newColVals):
+        """Set an entire column. newColVals is of type array"""
+        for r in range(self.rows):
+            self.data[r][col] = newColVals[r]
+
     def attr_name(self, col):
         """Get the name of the specified attribute"""
         return self.attr_names[col]
@@ -188,7 +193,7 @@ class Matrix:
     def set_attr_name(self, col, name):
         """Set the name of the specified attribute"""
         self.attr_names[col] = name
-
+    
     def attr_value(self, attr, val):
         """
         Get the name of the specified value (attr is a column index)

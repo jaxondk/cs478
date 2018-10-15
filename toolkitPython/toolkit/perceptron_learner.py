@@ -6,34 +6,36 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class PerceptronLearner(SupervisedLearner):
-    MAX_EPOCHS = 20 
+    MAX_EPOCHS = 35 
     STALL_NUM_EPOCHS = 5
     LEARNING_RATE = .1
     labels = []
     weights = []
+    debug = False
 
     def __init__(self):
         pass
 
     def initWeights(self, numFeatures):
         self.weights = np.zeros(numFeatures+1) #+1 for bias weight
-        # print('Initial weights: ', self.weights)
+        if(self.debug): print('Initial weights: ', self.weights)
 
     # Change in weights = c(t-z)x_i
     def updateWeights(self, pattern, label, out):
+        if(self.debug): print('Target/label: ', label)
         change = self.LEARNING_RATE * (label - out) * pattern
-        # print('Change in weights: ', change)
+        if(self.debug): print('Change in weights: ', change)
         self.weights += change
-        # print('Updated weights: ', self.weights)
+        if(self.debug): print('Updated weights: ', self.weights)
 
     # Sum(w_i*x_i)
     def calcNet(self, pattern, weights):
         net = (weights * pattern).sum()
-        # print("Net: ", net)
+        if(self.debug): print("Net: ", net)
         return net
 
     def trainModel(self, instance, label):
-        pattern, out = self.predictOne(instance)
+        pattern, out, _ = self.predictOne(instance)
         self.updateWeights(pattern, label, out)
 
     def train(self, features, labels):
@@ -49,7 +51,7 @@ class PerceptronLearner(SupervisedLearner):
         # avgMisclassRate = []
         # totalMisclass = 0.0
         for e in range(self.MAX_EPOCHS):
-            # print("Epoch " + str(e))
+            if(self.debug): print("Epoch " + str(e))
             for i in range(features.rows):
                 self.trainModel(features.row(i), labels.row(i)[0])
 
@@ -58,7 +60,7 @@ class PerceptronLearner(SupervisedLearner):
             # totalMisclass += (1 - accuracy)
             # avgMisclassRate.append(totalMisclass/(e+1))
             # print('misclass: ', (1-accuracy))
-            print('accuracy: ', accuracy)
+            if(self.debug): print('accuracy: ', accuracy)
             if(accuracy <= prev_accuracy):
                 noImprovementCount += 1
             else:
@@ -109,10 +111,10 @@ class PerceptronLearner(SupervisedLearner):
         @return: a tuple: (the instance with bias appended, the prediction for that instance)
         """
         pattern = np.append(np.array(instance), 1) #include a bias
-        # print('Pattern w/ bias: ', pattern)
+        if(self.debug): print('Pattern w/ bias: ', pattern)
         net = self.calcNet(pattern, self.weights)
         pred = 1.0 if (net > 0) else 0.0
-        return (pattern, pred)
+        return (pattern, pred, net)
 
     def predict(self, featureRow, pred):
         """
@@ -120,5 +122,5 @@ class PerceptronLearner(SupervisedLearner):
         :type pred: [float] - The manager is expecting an array, but it will be an array of length 1 containing the one prediction
         """
         del pred[:]
-        _, out = self.predictOne(featureRow)
+        _, out, _ = self.predictOne(featureRow)
         pred.append(out)
