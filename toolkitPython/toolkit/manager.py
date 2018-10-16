@@ -69,7 +69,7 @@ class MLSystemManager:
 
             print("Calculating accuracy on training set...")
 
-            features = Matrix(data, 0, 0, data.rows, data.cols-1)
+            features = Matrix(data, 0, 0, data.rows, data.cols-1) #TODO - change the 1 to be however many output nodes you need
             labels = Matrix(data, 0, data.cols-1, data.rows, 1)
             confusion = Matrix()
             start_time = time.time()

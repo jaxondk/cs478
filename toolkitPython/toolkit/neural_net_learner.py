@@ -9,8 +9,10 @@ import matplotlib.pyplot as plt
 class NeuralNetLearner(SupervisedLearner):
     labels = []
     weightMatrices = []
+    deltaWeightMatrices = []
     biasWeights = []
     activationList = []
+    errorList = [] # list of lists. Each list represents error values for the nodes in a layer
     nNodesPerHiddenLayer = None
     nHiddenLayers = None
     nOutputNodes = None
@@ -41,18 +43,24 @@ class NeuralNetLearner(SupervisedLearner):
         ### init weight matrix for input layer to first hidden layer
         # (nFeatures x nNodesPerHiddenLayer)
         self.weightMatrices.append(np.full((nFeatures, self.nNodesPerHiddenLayer), initVal if initVal else np.random.normal()))
+        self.deltaWeightMatrices.append(np.zeros((nFeatures, self.nNodesPerHiddenLayer)))
         self.biasWeights.append(np.full(self.nNodesPerHiddenLayer, initVal if initVal else np.random.normal()))
 
         ### init weight matrices for inner hidden layers
         # (nNodesPerHiddenLayer x nNodesPerHiddenLayer)
         for l in range(self.nHiddenLayers-1): 
             self.weightMatrices.append(np.full((self.nNodesPerHiddenLayer, self.nNodesPerHiddenLayer), initVal if initVal else np.random.normal()))
+            self.deltaWeightMatrices.append(np.zeros((self.nNodesPerHiddenLayer, self.nNodesPerHiddenLayer)))
             self.biasWeights.append(np.full(self.nNodesPerHiddenLayer, initVal if initVal else np.random.normal()))
 
         ### init weight matrix for last hidden layer to output layer
         # (nNodesPerHiddenlayer x nOutputNodes)
         self.weightMatrices.append(np.full((self.nNodesPerHiddenLayer, self.nOutputNodes), initVal if initVal else np.random.normal()))
+        self.deltaWeightMatrices.append(np.zeros((self.nNodesPerHiddenLayer, self.nOutputNodes)))
         self.biasWeights.append(np.full(self.nOutputNodes, initVal if initVal else np.random.normal()))
+
+        for l in range(self.nHiddenLayers+1):
+            self.errorList.append([]) # just for shape
 
     def forwardProp(self, instance):
         nodeInput = instance
@@ -61,11 +69,10 @@ class NeuralNetLearner(SupervisedLearner):
             activation = self.activationFromInput(nodeInput, l)
             self.activationList.append(activation)
             nodeInput = activation
+        input('FP done')
 
-        out = self.activationList[self.nHiddenLayers]
-        print('Out:', out)
-        input('Pause')
-        return out
+        # out = self.activationList[self.nHiddenLayers]
+        # return out
 
     # sigmoid activation
     def activationFromInput(self, nodeInput, layer):
@@ -76,11 +83,31 @@ class NeuralNetLearner(SupervisedLearner):
         print('Activation: ', activation)
         return activation
 
-    def computeError(self):
-        pass
+    def computeErrorOutputLayer(self, target):
+        # TODO - convert target to 1 hot encoding. I think this is needed when you have more than one output node
+        out = self.activationList[self.nHiddenLayers]
+        self.errorList[self.nHiddenLayers] = (target - out) * out * (1 - out) # element-wise multiply might be incorrect, but I think this is right. Also, trying to prepend this to errorList and I think that's how you do it
+        print('Error list after doing output layer error:', self.errorList)
 
-    def backProp(self):
-        pass
+    def computeErrorHiddenLayer(self, j):
+        dot = np.dot(self.errorList[j+1], self.weightMatrices[j+1]) #TODO - here. Fix this. See formula
+        print('dot', dot)
+        error = np.dot(self.errorList[j+1], self.weightMatrices[j+1]) * (self.activationList[j] * (1 - self.activationList[j]))
+        print('Error from hidden layer:', error)
+        self.errorList[j] = error
+
+    def computeError(self, target):
+        self.computeErrorOutputLayer(target)
+        for l in range(self.nHiddenLayers-1, -1, -1):
+            self.computeErrorHiddenLayer(l)
+
+    # calc errors for all the layers first, then calc delta weights for all layers, then update all the weights
+    def backProp(self, target):
+        self.computeError(target)
+        for l in range(self.nHiddenLayers, -1, -1):
+            self.deltaWeightMatrices[l] = self.LEARNING_RATE * np.dot(self.activationList[l], self.errorList[l]) #TODO - i think indices aren't right
+            
+        input('BP done')
 
     def train(self, features, labels):
         """
@@ -98,13 +125,12 @@ class NeuralNetLearner(SupervisedLearner):
         print('weights:',self.weightMatrices)
         print('bias weights:',self.biasWeights)
         for e in range(self.EPOCHS):
-            # TODO - from spec: "training set randomization at each epoch"
+            # TODO - from spec: "training set randomization at each epoch". I think this just means shuffle
             for i in range(features.rows):
+                self.activationList.clear() # Have a feeling this is needed between instances
                 instance = np.atleast_2d(features.row(i))
-                out = self.forwardProp(instance)
-                print('Out: ', out)
-                self.computeError()
-                self.backProp()
+                self.forwardProp(instance)
+                self.backProp(labels.row(i))
 
         
 
@@ -113,6 +139,8 @@ class NeuralNetLearner(SupervisedLearner):
         :type features: [float]
         :type labels: [float]
         """
+        #pick the output node/class with highest activation
+
         del labels[:]
         labels += self.labels
 
