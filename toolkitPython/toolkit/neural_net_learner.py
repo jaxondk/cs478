@@ -11,6 +11,7 @@ class NeuralNetLearner(SupervisedLearner):
     weightMatrices = []
     deltaWeightMatrices = []
     biasWeights = []
+    biasDeltaWeights = []
     activationList = []
     errorList = [] # list of lists. Each list represents error values for the nodes in a layer
     nNodesPerHiddenLayer = None
@@ -59,8 +60,10 @@ class NeuralNetLearner(SupervisedLearner):
         self.deltaWeightMatrices.append(np.zeros((self.nNodesPerHiddenLayer, self.nOutputNodes)))
         self.biasWeights.append(np.full(self.nOutputNodes, initVal if initVal else np.random.normal()))
 
+        ### Init other structures (shape only)
         for l in range(self.nHiddenLayers+1):
-            self.errorList.append([]) # just for shape
+            self.errorList.append([]) 
+            self.biasDeltaWeights.append([])
 
     def forwardProp(self, instance):
         nodeInput = instance
@@ -69,7 +72,6 @@ class NeuralNetLearner(SupervisedLearner):
             activation = self.activationFromInput(nodeInput, l)
             self.activationList.append(activation)
             nodeInput = activation
-        input('FP done')
 
         # out = self.activationList[self.nHiddenLayers]
         # return out
@@ -83,19 +85,18 @@ class NeuralNetLearner(SupervisedLearner):
         print('Activation: ', activation)
         return activation
 
+    # accurate for hw
     def computeErrorOutputLayer(self, target):
         # TODO - convert target to 1 hot encoding. I think this is needed when you have more than one output node
         out = self.activationList[self.nHiddenLayers]
-        self.errorList[self.nHiddenLayers] = (target - out) * out * (1 - out) # element-wise multiply might be incorrect, but I think this is right. Also, trying to prepend this to errorList and I think that's how you do it
+        self.errorList[self.nHiddenLayers] = (target - out) * out * (1 - out)
         print('Error list after doing output layer error:', self.errorList)
 
+    # accurate for hw
     def computeErrorHiddenLayer(self, j):
-        dot = np.dot(self.errorList[j+1], self.weightMatrices[j+1]) #TODO - here. Fix this. See formula
-        print('dot', dot)
-        error = np.dot(self.errorList[j+1], self.weightMatrices[j+1]) * (self.activationList[j] * (1 - self.activationList[j]))
-        print('Error from hidden layer:', error)
+        error = np.dot(self.errorList[j+1], self.weightMatrices[j+1].T) * (self.activationList[j] * (1 - self.activationList[j]))
         self.errorList[j] = error
-
+    # accurate for hw
     def computeError(self, target):
         self.computeErrorOutputLayer(target)
         for l in range(self.nHiddenLayers-1, -1, -1):
@@ -105,8 +106,9 @@ class NeuralNetLearner(SupervisedLearner):
     def backProp(self, target):
         self.computeError(target)
         for l in range(self.nHiddenLayers, -1, -1):
-            self.deltaWeightMatrices[l] = self.LEARNING_RATE * np.dot(self.activationList[l], self.errorList[l]) #TODO - i think indices aren't right
-            
+            self.deltaWeightMatrices[l] = self.LEARNING_RATE * np.dot(self.activationList[l-1].T, self.errorList[l])
+            # TODO - update bias weights as well
+        print('Delta weights after BP:', self.deltaWeightMatrices)
         input('BP done')
 
     def train(self, features, labels):
