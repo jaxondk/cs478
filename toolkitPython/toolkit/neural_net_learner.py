@@ -11,44 +11,70 @@ class NeuralNetLearner(SupervisedLearner):
     weightMatrices = []
     biasWeights = []
     activationList = []
-    nNodesPerHiddenLayer = 2
-    nHiddenLayers = 1
-    nOutputNodes = 1
-    # nTotalLayers = nHiddenLayers + 2
-    EPOCHS = 5
+    nNodesPerHiddenLayer = None
+    nHiddenLayers = None
+    nOutputNodes = None
+    EPOCHS = 1
+    LEARNING_RATE = None
+    MOMENTUM = None
 
     def __init__(self):
         pass
+
+    # def initTestWeights(self):
+
+    def initHyperParamsHW(self):
+        self.nHiddenLayers = 1
+        self.nNodesPerHiddenLayer = 2
+        self.nOutputNodes = 1
+        self.LEARNING_RATE = 1
+        self.MOMENTUM = 0
+
+    # Part 1 - iris dataset
+    def initHyperParams1(self, nFeatures):
+        self.nNodesPerHiddenLayer = nFeatures * 2
+        self.nHiddenLayers = 1
+        self.LEARNING_RATE = .1
+        self.MOMENTUM = 0
     
-    def initWeightMatrices(self, nFeatures):
+    def initWeightMatrices(self, nFeatures, initVal):
         ### init weight matrix for input layer to first hidden layer
         # (nFeatures x nNodesPerHiddenLayer)
-        self.weightMatrices.append(np.full((nFeatures, self.nNodesPerHiddenLayer), np.random.normal()))
-        self.biasWeights.append(np.full(self.nNodesPerHiddenLayer, np.random.normal()))
+        self.weightMatrices.append(np.full((nFeatures, self.nNodesPerHiddenLayer), initVal if initVal else np.random.normal()))
+        self.biasWeights.append(np.full(self.nNodesPerHiddenLayer, initVal if initVal else np.random.normal()))
 
         ### init weight matrices for inner hidden layers
         # (nNodesPerHiddenLayer x nNodesPerHiddenLayer)
         for l in range(self.nHiddenLayers-1): 
-            self.weightMatrices.append(np.full((self.nNodesPerHiddenLayer, self.nNodesPerHiddenLayer), np.random.normal()))
-            self.biasWeights.append(np.full(self.nNodesPerHiddenLayer, np.random.normal()))
+            self.weightMatrices.append(np.full((self.nNodesPerHiddenLayer, self.nNodesPerHiddenLayer), initVal if initVal else np.random.normal()))
+            self.biasWeights.append(np.full(self.nNodesPerHiddenLayer, initVal if initVal else np.random.normal()))
 
         ### init weight matrix for last hidden layer to output layer
         # (nNodesPerHiddenlayer x nOutputNodes)
-        self.weightMatrices.append(np.full((self.nNodesPerHiddenLayer, self.nOutputNodes), np.random.normal()))
-        self.biasWeights.append(np.full(self.nOutputNodes, np.random.normal()))
+        self.weightMatrices.append(np.full((self.nNodesPerHiddenLayer, self.nOutputNodes), initVal if initVal else np.random.normal()))
+        self.biasWeights.append(np.full(self.nOutputNodes, initVal if initVal else np.random.normal()))
 
     def forwardProp(self, instance):
-        input = instance
-        for l in range(self.nHiddenLayers):
-            net = np.dot(input, self.weightMatrices[l]) + self.biasWeights[l] 
-            self.activationList.append(self.activation(net))
-            input = self.activationList[l]
-        out = self.activationList[self.nHiddenLayers-1]
+        nodeInput = instance
+        for l in range(self.nHiddenLayers+1):
+            print('layer: ', l)
+            activation = self.activationFromInput(nodeInput, l)
+            self.activationList.append(activation)
+            nodeInput = activation
+
+        out = self.activationList[self.nHiddenLayers]
+        print('Out:', out)
+        input('Pause')
         return out
 
     # sigmoid activation
-    def activation(self, net):
-        return 1/(1+np.exp(-net))
+    def activationFromInput(self, nodeInput, layer):
+        print('nodeInput:', nodeInput)
+        net = np.dot(nodeInput, self.weightMatrices[layer]) + self.biasWeights[layer] 
+        print('Net: ', net)
+        activation = 1/(1+np.exp(-net))
+        print('Activation: ', activation)
+        return activation
 
     def computeError(self):
         pass
@@ -61,18 +87,21 @@ class NeuralNetLearner(SupervisedLearner):
         :type features: Matrix
         :type labels: Matrix
         """
+        print(features.row(0))
         nFeatures = features.cols
         nInstances = features.rows
         print('nfeatures: ', nFeatures)
         print('ninstances: ', nInstances)
-        self.initWeightMatrices(nFeatures)
+
+        self.initHyperParamsHW()
+        self.initWeightMatrices(nFeatures, 1)
         print('weights:',self.weightMatrices)
         print('bias weights:',self.biasWeights)
-
         for e in range(self.EPOCHS):
+            # TODO - from spec: "training set randomization at each epoch"
             for i in range(features.rows):
-                input = np.atleast_2d(features.row(i))
-                out = self.forwardProp(input)
+                instance = np.atleast_2d(features.row(i))
+                out = self.forwardProp(instance)
                 print('Out: ', out)
                 self.computeError()
                 self.backProp()

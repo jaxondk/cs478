@@ -1,0 +1,7 @@
+@RELATION neural_net_test
+@ATTRIBUTE node5 continuous
+@ATTRIBUTE node6 continuous
+@ATTRIBUTE T continuous
+@DATA
+0,0,1.0
+0,1,0
