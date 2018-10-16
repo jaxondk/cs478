@@ -66,15 +66,13 @@ class NeuralNetLearner(SupervisedLearner):
             self.biasDeltaWeights.append([])
 
     def forwardProp(self, instance):
+        self.activationList.append(instance) # the input nodes do not have activation f(x), just consider incoming instance as their output
         nodeInput = instance
         for l in range(self.nHiddenLayers+1):
             print('layer: ', l)
             activation = self.activationFromInput(nodeInput, l)
             self.activationList.append(activation)
             nodeInput = activation
-
-        # out = self.activationList[self.nHiddenLayers]
-        # return out
 
     # sigmoid activation
     def activationFromInput(self, nodeInput, layer):
@@ -88,13 +86,13 @@ class NeuralNetLearner(SupervisedLearner):
     # accurate for hw
     def computeErrorOutputLayer(self, target):
         # TODO - convert target to 1 hot encoding. I think this is needed when you have more than one output node
-        out = self.activationList[self.nHiddenLayers]
+        out = self.activationList[self.nHiddenLayers+1]
         self.errorList[self.nHiddenLayers] = (target - out) * out * (1 - out)
         print('Error list after doing output layer error:', self.errorList)
 
     # accurate for hw
     def computeErrorHiddenLayer(self, j):
-        error = np.dot(self.errorList[j+1], self.weightMatrices[j+1].T) * (self.activationList[j] * (1 - self.activationList[j]))
+        error = np.dot(self.errorList[j+1], self.weightMatrices[j+1].T) * (self.activationList[j+1] * (1 - self.activationList[j+1]))
         self.errorList[j] = error
     # accurate for hw
     def computeError(self, target):
@@ -106,7 +104,7 @@ class NeuralNetLearner(SupervisedLearner):
     def backProp(self, target):
         self.computeError(target)
         for l in range(self.nHiddenLayers, -1, -1):
-            self.deltaWeightMatrices[l] = self.LEARNING_RATE * np.dot(self.activationList[l-1].T, self.errorList[l])
+            self.deltaWeightMatrices[l] = self.LEARNING_RATE * np.dot(self.activationList[l].T, self.errorList[l])
             # TODO - update bias weights as well
         print('Delta weights after BP:', self.deltaWeightMatrices)
         input('BP done')
@@ -116,7 +114,6 @@ class NeuralNetLearner(SupervisedLearner):
         :type features: Matrix
         :type labels: Matrix
         """
-        print(features.row(0))
         nFeatures = features.cols
         nInstances = features.rows
         print('nfeatures: ', nFeatures)
