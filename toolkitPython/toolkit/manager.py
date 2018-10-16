@@ -4,6 +4,7 @@ from .supervised_learner import SupervisedLearner
 from .baseline_learner import BaselineLearner
 from .perceptron_learner import PerceptronLearner
 from .multi_perceptron_learner import MultiPerceptronLearner
+from .neural_net_learner import NeuralNetLearner
 from .matrix import Matrix
 import random
 import argparse
@@ -27,7 +28,7 @@ class MLSystemManager:
             "baseline": BaselineLearner(),
             "perceptron": PerceptronLearner(),
             "multiperceptron": MultiPerceptronLearner(),
-            #"neuralnet": NeuralNetLearner(),
+            "neuralnet": NeuralNetLearner(),
             #"decisiontree": DecisionTreeLearner(),
             #"knn": InstanceBasedLearner()
         }
