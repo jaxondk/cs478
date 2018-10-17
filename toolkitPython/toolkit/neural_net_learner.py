@@ -25,6 +25,7 @@ class NeuralNetLearner(SupervisedLearner):
     nOutputNodes = None
     isContinuous = None
     EPOCHS = 40
+    STALL_NUM_EPOCHS = 20
     LEARNING_RATE = None
     MOMENTUM = None
 
@@ -151,30 +152,46 @@ class NeuralNetLearner(SupervisedLearner):
         # print('bias weights after BP:',self.biasWeights)
         # input('BP done')
 
-    def train(self, features, labels):
+    def trainModel(self, row, label):
+        instance = np.atleast_2d(row)
+        # print('Pattern: ',instance)
+        self.forwardProp(instance)
+        # print('Activations', self.activationList)
+        target = label if self.isContinuous else self.oneHot(label[0])
+        self.backProp(target)
+        self.activationList.clear() # this is needed between instances b/c we append to it throughout the algorithm
+
+    def train(self, features, labels, validationFeatures, validationLabels):
         """
         :type features: Matrix
         :type labels: Matrix
         """
+        # splitIntoValidation(self, features, labels)
+
         nFeatures = features.cols
         self.isContinuous = labels.value_count(0) == 0
         self.nOutputNodes = labels.value_count(0) if not self.isContinuous else 1
         self.initHyperParamsIris(nFeatures)
         self.initWeightMatrices(nFeatures)
-        # self.changeWeightsForEx2()
 
+        prev_accuracy = 0.0
+        noImprovementCount = 0
         for e in range(self.EPOCHS):
             # if(e>0): input('pause')
             print('EPOCH', e+1)
             features.shuffle(labels)
             for i in range(features.rows):
-                instance = np.atleast_2d(features.row(i))
-                # print('Pattern: ',instance)
-                self.forwardProp(instance)
-                # print('Activations', self.activationList)
-                target = labels.row(i) if self.isContinuous else self.oneHot(labels.row(i)[0])
-                self.backProp(target)
-                self.activationList.clear() # this is needed between instances b/c we append to it throughout the algorithm
+                self.trainModel(features.row(i), labels.row(i))
+
+            accuracy, mse = self.measure_accuracy(validationFeatures, validationLabels)
+            if(accuracy <= prev_accuracy):
+                noImprovementCount += 1
+            else:
+                noImprovementCount = 0
+                prev_accuracy = accuracy
+            if(noImprovementCount == self.STALL_NUM_EPOCHS):
+                print('Accuracy has stalled for {0} epochs, ending training on epoch {1}'.format(self.STALL_NUM_EPOCHS, e))
+                break
 
     # If continuous, you just return whatever the output node was.
     # If nominal, you return index of the highest output node (just like multiperceptron).
@@ -188,7 +205,7 @@ class NeuralNetLearner(SupervisedLearner):
 
         self.forwardProp(np.atleast_2d(featureRow))
         outputNodePreds = self.activationList[self.nHiddenLayers+1][0]
-        print('Output nodes', outputNodePreds)
+        # print('Output nodes', outputNodePreds)
         self.activationList.clear()
 
         finalLabel = outputNodePreds[0] if self.isContinuous else np.argmax(outputNodePreds)
@@ -197,5 +214,5 @@ class NeuralNetLearner(SupervisedLearner):
         # else:
         #     finalLabel = np.argmax(outputNodePreds)
 
-        print('Final Label', finalLabel)
+        # print('Final Label', finalLabel)
         pred += [finalLabel]

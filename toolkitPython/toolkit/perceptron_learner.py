@@ -51,12 +51,13 @@ class PerceptronLearner(SupervisedLearner):
         # avgMisclassRate = []
         # totalMisclass = 0.0
         for e in range(self.MAX_EPOCHS):
+            features.shuffle(buddy=labels)
             if(self.debug): print("Epoch " + str(e))
             for i in range(features.rows):
                 self.trainModel(features.row(i), labels.row(i)[0])
 
             # Calc accuracy and check if it has stalled
-            accuracy = self.measure_accuracy(features, labels)
+            accuracy, _ = self.measure_accuracy(features, labels)
             # totalMisclass += (1 - accuracy)
             # avgMisclassRate.append(totalMisclass/(e+1))
             # print('misclass: ', (1-accuracy))
@@ -70,7 +71,6 @@ class PerceptronLearner(SupervisedLearner):
                 print('Accuracy has stalled for {0} epochs, ending training on epoch {1}'.format(self.STALL_NUM_EPOCHS, e))
                 break
             
-            features.shuffle(buddy=labels)
 
         # print('final weight vector: ', self.weights)
         # self.plotSeparability(self.weights, features, labels)

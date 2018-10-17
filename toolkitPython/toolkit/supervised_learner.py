@@ -8,7 +8,7 @@ import math
 
 class SupervisedLearner:
 
-    def train(self, features, labels):
+    def train(self, features, labels, validationFeatures=None, validationLabels=None):
         """
         Before you call this method, you need to divide your data
         into a feature matrix and a label matrix.
@@ -68,6 +68,7 @@ class SupervisedLearner:
 
             correct_count = 0
             prediction = []
+            error = [] #np.array(np.zeros(features.rows))
             for i in range(features.rows):
                 feat = features.row(i)
                 targ = int(labels.get(i, 0))
@@ -75,12 +76,15 @@ class SupervisedLearner:
                     raise Exception("The label is out of range")
                 self.predict(feat, prediction)
                 pred = int(prediction[0])
+                error.append((targ - pred)**2)
                 if confusion:
                     confusion.set(targ, pred, confusion.get(targ, pred)+1)
                 if pred == targ:
                     correct_count += 1
 
-            return correct_count / features.rows
+            accuracy = correct_count / features.rows
+            mse = sum(error) / len(error)
+            return (accuracy, mse)
 
 
 

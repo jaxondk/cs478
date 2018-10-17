@@ -44,6 +44,7 @@ class MLSystemManager:
         learner_name = args.L
         eval_method = args.E[0]
         eval_parameter = args.E[1] if len(args.E) > 1 else None
+        eval_parameter2 = args.E[2] if len(args.E) > 2 else None
         print_confusion_matrix = args.verbose
         normalize = args.normalize
         random.seed(args.seed) # Use a seed for deterministic results, if provided (makes debugging easier)
@@ -76,7 +77,7 @@ class MLSystemManager:
             learner.train(features, labels)
             elapsed_time = time.time() - start_time
             print("Time to train (in seconds): {}".format(elapsed_time))
-            accuracy = learner.measure_accuracy(features, labels, confusion)
+            accuracy, _ = learner.measure_accuracy(features, labels, confusion)
             print("Training set accuracy: " + str(accuracy))
 
             if print_confusion_matrix:
@@ -102,13 +103,13 @@ class MLSystemManager:
             elapsed_time = time.time() - start_time
             print("Time to train (in seconds): {}".format(elapsed_time))
 
-            train_accuracy = learner.measure_accuracy(features, labels)
+            train_accuracy, _ = learner.measure_accuracy(features, labels)
             print("Training set accuracy: {}".format(train_accuracy))
 
             test_features = Matrix(test_data, 0, 0, test_data.rows, test_data.cols-1)
             test_labels = Matrix(test_data, 0, test_data.cols-1, test_data.rows, 1)
             confusion = Matrix()
-            test_accuracy = learner.measure_accuracy(test_features, test_labels, confusion)
+            test_accuracy, _ = learner.measure_accuracy(test_features, test_labels, confusion)
             print("Test set accuracy: {}".format(test_accuracy))
 
             if print_confusion_matrix:
@@ -139,17 +140,59 @@ class MLSystemManager:
             elapsed_time = time.time() - start_time
             print("Time to train (in seconds): {}".format(elapsed_time))
 
-            train_accuracy = learner.measure_accuracy(train_features, train_labels)
+            train_accuracy, _ = learner.measure_accuracy(train_features, train_labels)
             print("Training set accuracy: {}".format(train_accuracy))
 
             confusion = Matrix()
-            test_accuracy = learner.measure_accuracy(test_features, test_labels, confusion)
+            test_accuracy, _ = learner.measure_accuracy(test_features, test_labels, confusion)
             print("Test set accuracy: {}".format(test_accuracy))
 
             if print_confusion_matrix:
                 print("\nConfusion matrix: (Row=target value, Col=predicted value)")
                 confusion.print()
                 print("")
+
+        elif eval_method == "validate":
+
+            print("Splits into training, validation, and test sets. Validation set can be used as stopping criteria for training")
+            train_percent = float(eval_parameter)
+            validate_percent = float(eval_parameter2)
+            if train_percent < 0 or train_percent > 1 or validate_percent < 0 or validate_percent > 1:
+                raise Exception("Percentage for random evaluation must be between 0 and 1")
+            print("Percentage used for training: {}".format(train_percent))
+            print("Percentage used for validating: {}".format(validate_percent))
+            print("Percentage used for testing: {}".format(1 - train_percent - validate_percent))
+
+            data.shuffle()
+
+            train_size = int(train_percent * data.rows)
+            train_features = Matrix(data, 0, 0, train_size, data.cols-1)
+            train_labels = Matrix(data, 0, data.cols-1, train_size, 1)
+
+            validate_size = int(validate_percent * data.rows)
+            validate_features = Matrix(data, train_size, 0, validate_size, data.cols-1)
+            validate_labels = Matrix(data, train_size, data.cols-1, validate_size, 1)
+
+            test_features = Matrix(data, train_size + validate_size, 0, data.rows - train_size - validate_size, data.cols-1)
+            test_labels = Matrix(data, train_size + validate_size, data.cols-1, data.rows - train_size - validate_size, 1)
+
+            start_time = time.time()
+            learner.train(train_features, train_labels, validate_features, validate_labels)
+            elapsed_time = time.time() - start_time
+            print("Time to train (in seconds): {}".format(elapsed_time))
+
+            train_accuracy, train_mse = learner.measure_accuracy(train_features, train_labels)
+            print("Training set accuracy: {}".format(train_accuracy))
+            print("Training set MSE: {}".format(train_mse))
+
+            validate_accuracy, validate_mse = learner.measure_accuracy(validate_features, validate_labels)
+            print("Validation set accuracy: {}".format(validate_accuracy))
+            print("Validation set MSE: {}".format(validate_mse))
+
+            confusion = Matrix()
+            test_accuracy, test_mse = learner.measure_accuracy(test_features, test_labels, confusion)
+            print("Test set accuracy: {}".format(test_accuracy))
+            print("Test set MSE: {}".format(test_mse))
 
         elif eval_method == "cross":
 
@@ -181,7 +224,7 @@ class MLSystemManager:
                     learner.train(train_features, train_labels)
                     elapsed_time += time.time() - start_time
 
-                    accuracy = learner.measure_accuracy(test_features, test_labels)
+                    accuracy, _ = learner.measure_accuracy(test_features, test_labels)
                     sum_accuracy += accuracy
                     print("Rep={}, Fold={}, Accuracy={}".format(j, i, accuracy))
 
@@ -200,7 +243,7 @@ class MLSystemManager:
         parser.add_argument('-R', '--seed', help="Random seed") # will give a string
         parser.add_argument('-L', required=True, choices=['baseline', 'perceptron', 'multiperceptron', 'neuralnet', 'decisiontree', 'knn'], help='Learning Algorithm')
         parser.add_argument('-A', '--arff', metavar='filename', required=True, help='ARFF file')
-        parser.add_argument('-E', metavar=('METHOD', 'args'), required=True, nargs='+', help="Evaluation method (training | static <test_ARFF_file> | random <%%_for_training> | cross <num_folds>)")
+        parser.add_argument('-E', metavar=('METHOD', 'args'), required=True, nargs='+', help="Evaluation method (training | static <test_ARFF_file> | random <%%_for_training> | validate <%%_for_validating> | cross <num_folds>)")
 
         return parser
 
