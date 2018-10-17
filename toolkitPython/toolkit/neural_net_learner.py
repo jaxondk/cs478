@@ -24,10 +24,13 @@ class NeuralNetLearner(SupervisedLearner):
     nHiddenLayers = None
     nOutputNodes = None
     isContinuous = None
-    EPOCHS = 40
-    STALL_NUM_EPOCHS = 20
-    LEARNING_RATE = None
+    EPOCHS = 20
+    STALL_NUM_EPOCHS = 40
+    LEARNING_RATE = .1
     MOMENTUM = None
+    finalTrainMSE = []
+    finalValMSE = []
+    finalTestMSE = []
 
     def __init__(self):
         pass
@@ -37,30 +40,36 @@ class NeuralNetLearner(SupervisedLearner):
         self.nHiddenLayers = 1
         self.LEARNING_RATE = .1
         self.MOMENTUM = 0
+        np.random.seed(0) 
 
-    def initHyperParamsHW(self):
+    def initHyperParamsVowel(self, nFeatures):
+        self.nNodesPerHiddenLayer = nFeatures * 2
         self.nHiddenLayers = 1
-        self.nNodesPerHiddenLayer = 2
-        self.LEARNING_RATE = 1
+        # self.LEARNING_RATE = .1
         self.MOMENTUM = 0
 
+    # def initHyperParamsHW(self):
+    #     self.nHiddenLayers = 1
+    #     self.nNodesPerHiddenLayer = 2
+    #     self.LEARNING_RATE = 1
+    #     self.MOMENTUM = 0
 
-    def initHyperParamsEx2(self):
-        self.nNodesPerHiddenLayer = 3
-        self.nHiddenLayers = 1
-        self.LEARNING_RATE = 0.175
-        self.MOMENTUM = 0.9
 
-    def changeWeightsForEx2(self):
-        self.weightMatrices[0][0] = [-0.03, 0.04, 0.03]
-        self.weightMatrices[0][1] = [0.03, -0.02, 0.02]
-        self.weightMatrices[1][0] = [-0.01]
-        self.weightMatrices[1][1] = [0.03]
-        self.weightMatrices[1][2] = [0.02]
-        self.biasWeights[0] = np.array([-0.01, 0.01, -0.02])
-        self.biasWeights[1] = np.array([0.02])
-        # input('pause')
-        pass
+    # def initHyperParamsEx2(self):
+    #     self.nNodesPerHiddenLayer = 3
+    #     self.nHiddenLayers = 1
+    #     self.LEARNING_RATE = 0.175
+    #     self.MOMENTUM = 0.9
+
+    # def changeWeightsForEx2(self):
+    #     self.weightMatrices[0][0] = [-0.03, 0.04, 0.03]
+    #     self.weightMatrices[0][1] = [0.03, -0.02, 0.02]
+    #     self.weightMatrices[1][0] = [-0.01]
+    #     self.weightMatrices[1][1] = [0.03]
+    #     self.weightMatrices[1][2] = [0.02]
+    #     self.biasWeights[0] = np.array([-0.01, 0.01, -0.02])
+    #     self.biasWeights[1] = np.array([0.02])
+    #     # input('pause')
     
     def initWeightMatrices(self, nFeatures, initVal=None):
         ### Init shape of structures
@@ -160,22 +169,25 @@ class NeuralNetLearner(SupervisedLearner):
         target = label if self.isContinuous else self.oneHot(label[0])
         self.backProp(target)
         self.activationList.clear() # this is needed between instances b/c we append to it throughout the algorithm
-
-    def train(self, features, labels, validationFeatures, validationLabels):
+        
+    def realTrain(self, features, labels, validationFeatures, validationLabels, testFeatures, testLabels):
         """
         :type features: Matrix
         :type labels: Matrix
         """
-        # splitIntoValidation(self, features, labels)
 
         nFeatures = features.cols
         self.isContinuous = labels.value_count(0) == 0
         self.nOutputNodes = labels.value_count(0) if not self.isContinuous else 1
-        self.initHyperParamsIris(nFeatures)
+        self.initHyperParamsVowel(nFeatures)
         self.initWeightMatrices(nFeatures)
 
-        prev_accuracy = 0.0
+        bssf_mse = 99999
         noImprovementCount = 0
+        trainMSE = []
+        valMSE = []
+        valAccuracy = []
+        testMSE = []
         for e in range(self.EPOCHS):
             # if(e>0): input('pause')
             print('EPOCH', e+1)
@@ -183,15 +195,54 @@ class NeuralNetLearner(SupervisedLearner):
             for i in range(features.rows):
                 self.trainModel(features.row(i), labels.row(i))
 
-            accuracy, mse = self.measure_accuracy(validationFeatures, validationLabels)
-            if(accuracy <= prev_accuracy):
+            trAccuracy, trMSE = self.measure_accuracy(features, labels)
+            vAccuracy, vMSE = self.measure_accuracy(validationFeatures, validationLabels)
+            _, tMSE = self.measure_accuracy(testFeatures, testLabels)
+            trainMSE.append(trMSE)
+            valMSE.append(vMSE)
+            valAccuracy.append(vAccuracy)
+            testMSE.append(tMSE)
+            if(vMSE >= bssf_mse):
                 noImprovementCount += 1
             else:
                 noImprovementCount = 0
-                prev_accuracy = accuracy
+                bssf_mse = vMSE
             if(noImprovementCount == self.STALL_NUM_EPOCHS):
-                print('Accuracy has stalled for {0} epochs, ending training on epoch {1}'.format(self.STALL_NUM_EPOCHS, e))
+                print('MSE has stalled for {0} epochs, ending training on epoch {1}'.format(self.STALL_NUM_EPOCHS, e))
                 break
+        self.finalTrainMSE.append(trainMSE[-1])
+        self.finalValMSE.append(valMSE[-1])
+        self.finalTestMSE.append(testMSE[-1])
+
+    #wrapper around train so that we can do some analysis
+    def train(self, features, labels, validationFeatures, validationLabels, testFeatures, testLabels):
+        learningRates = [.1, .25, .5, .75, 1, 1.5]
+        for lr in learningRates:
+            self.LEARNING_RATE = lr
+            self.realTrain(features, labels, validationFeatures, validationLabels, testFeatures, testLabels)
+        self.plotVowelMSE(self.finalTrainMSE, self.finalValMSE, self.finalTestMSE, learningRates)
+
+    def plotIrisMSE(self, trainMSE, valMSE, valAccuracy):
+        plt.plot(range(len(trainMSE)), trainMSE, label='Train MSE') # labels make a legend when you call plt.legend(...)
+        plt.plot(range(len(valMSE)), valMSE, label='Val MSE') 
+        plt.plot(range(len(valAccuracy)), valAccuracy, label='Val Accuracy')
+        plt.xlabel('Epoch')
+        plt.ylabel('MSE/Accuracy')
+        plt.title('IRIS: MSE/Accuracy vs. Epoch')
+        plt.legend(loc='center right')
+        plt.show()
+
+
+    def plotVowelMSE(self, trainMSE, valMSE, testMSE, LRs):
+        plt.plot(LRs, trainMSE, label='Train MSE')
+        plt.plot(LRs, valMSE, label='Val MSE') 
+        plt.plot(LRs, testMSE, label='Test MSE') 
+        plt.xlabel('LR')
+        plt.ylabel('MSE')
+        plt.title('VOWEL: Final MSE vs. LR')
+        plt.legend(loc='lower right')
+        plt.xticks(LRs)
+        plt.show()
 
     # If continuous, you just return whatever the output node was.
     # If nominal, you return index of the highest output node (just like multiperceptron).
