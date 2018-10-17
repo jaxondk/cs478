@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 For example 2 dataset (continuous):
 DONE 1. labels.value_count tells you how many output nodes to have. But for continuous, this returns 0. Need 1 output node
 DONE 2. For continuous output, target needs no modification. For nominal, must do 1-hot encoding
-3. In predict, if it's continuous you just return whatever the output. If nominal, you return index of the highest output node (just like multiperceptron).
+DONE 3. In predict, if it's continuous you just return whatever the output. If nominal, you return index of the highest output node (just like multiperceptron).
 '''
 
 class NeuralNetLearner(SupervisedLearner):
@@ -24,12 +24,18 @@ class NeuralNetLearner(SupervisedLearner):
     nHiddenLayers = None
     nOutputNodes = None
     isContinuous = None
-    EPOCHS = 3
+    EPOCHS = 40
     LEARNING_RATE = None
-    MOMENTUM = 1
+    MOMENTUM = None
 
     def __init__(self):
         pass
+
+    def initHyperParamsIris(self, nFeatures):
+        self.nNodesPerHiddenLayer = nFeatures * 2
+        self.nHiddenLayers = 1
+        self.LEARNING_RATE = .1
+        self.MOMENTUM = 0
 
     def initHyperParamsHW(self):
         self.nHiddenLayers = 1
@@ -37,11 +43,6 @@ class NeuralNetLearner(SupervisedLearner):
         self.LEARNING_RATE = 1
         self.MOMENTUM = 0
 
-    def initHyperParamsIris(self, nFeatures):
-        self.nNodesPerHiddenLayer = nFeatures * 2
-        self.nHiddenLayers = 1
-        self.LEARNING_RATE = .1
-        self.MOMENTUM = 0
 
     def initHyperParamsEx2(self):
         self.nNodesPerHiddenLayer = 3
@@ -62,33 +63,37 @@ class NeuralNetLearner(SupervisedLearner):
     
     def initWeightMatrices(self, nFeatures, initVal=None):
         ### Init shape of structures
-        for l in range(self.nHiddenLayers+1):
+        for _ in range(self.nHiddenLayers+1):
             self.errorList.append([]) 
 
         ### init weight matrix for input layer to first hidden layer
         # (nFeatures x nNodesPerHiddenLayer)
-        self.weightMatrices.append(np.full((nFeatures, self.nNodesPerHiddenLayer), initVal if initVal else np.random.normal()))
+        self.weightMatrices.append(np.full((nFeatures, self.nNodesPerHiddenLayer), \
+            initVal if initVal else np.random.normal(size=(nFeatures, self.nNodesPerHiddenLayer))))
         self.deltaWeightMatrices.append(np.zeros((nFeatures, self.nNodesPerHiddenLayer)))
-        self.biasWeights.append(np.full(self.nNodesPerHiddenLayer, initVal if initVal else np.random.normal()))
+        self.biasWeights.append(np.full(self.nNodesPerHiddenLayer, initVal if initVal else np.random.normal(size=self.nNodesPerHiddenLayer)))
         self.deltaBiasWeights.append(np.zeros(self.nNodesPerHiddenLayer))
 
         ### init weight matrices for inner hidden layers
         # (nNodesPerHiddenLayer x nNodesPerHiddenLayer)
-        for l in range(self.nHiddenLayers-1): 
-            self.weightMatrices.append(np.full((self.nNodesPerHiddenLayer, self.nNodesPerHiddenLayer), initVal if initVal else np.random.normal()))
+        for _ in range(self.nHiddenLayers-1): 
+            self.weightMatrices.append(np.full((self.nNodesPerHiddenLayer, self.nNodesPerHiddenLayer), \
+                initVal if initVal else np.random.normal(size=(self.nNodesPerHiddenLayer, self.nNodesPerHiddenLayer))))
             self.deltaWeightMatrices.append(np.zeros((self.nNodesPerHiddenLayer, self.nNodesPerHiddenLayer)))
-            self.biasWeights.append(np.full(self.nNodesPerHiddenLayer, initVal if initVal else np.random.normal()))
+            self.biasWeights.append(np.full(self.nNodesPerHiddenLayer, initVal if initVal else np.random.normal(size=self.nNodesPerHiddenLayer)))
             self.deltaBiasWeights.append(np.zeros(self.nNodesPerHiddenLayer))
 
         ### init weight matrix for last hidden layer to output layer
         # (nNodesPerHiddenlayer x nOutputNodes)
-        self.weightMatrices.append(np.full((self.nNodesPerHiddenLayer, self.nOutputNodes), initVal if initVal else np.random.normal()))
+        self.weightMatrices.append(np.full((self.nNodesPerHiddenLayer, self.nOutputNodes), \
+            initVal if initVal else np.random.normal(size=(self.nNodesPerHiddenLayer, self.nOutputNodes))))
         self.deltaWeightMatrices.append(np.zeros((self.nNodesPerHiddenLayer, self.nOutputNodes)))
-        self.biasWeights.append(np.full(self.nOutputNodes, initVal if initVal else np.random.normal()))
+        self.biasWeights.append(np.full(self.nOutputNodes, initVal if initVal else np.random.normal(size=self.nOutputNodes)))
         self.deltaBiasWeights.append(np.zeros(self.nOutputNodes))
 
     def forwardProp(self, instance):
         self.activationList.append(instance) # the input nodes do not have activation f(x), just consider incoming instance as their output
+        # TODO - don't use append here. build your activationList shape beforehand and index in. Then you don't have to keep clearing activationList
         nodeInput = instance
         for l in range(self.nHiddenLayers+1):
             activation = self.activationFromInput(nodeInput, l)
@@ -97,10 +102,12 @@ class NeuralNetLearner(SupervisedLearner):
 
     # sigmoid activation
     def activationFromInput(self, nodeInput, layer):
+        # print('node input', nodeInput)
         net = np.dot(nodeInput, self.weightMatrices[layer]) + self.biasWeights[layer] 
         # print('Net: ', net)
         activation = 1/(1+np.exp(-net))
         # print('Activation: ', activation)
+        # input('pause')
         return activation
 
     # accurate for hw
@@ -138,10 +145,10 @@ class NeuralNetLearner(SupervisedLearner):
     # calc errors for all the layers first, then calc delta weights for all layers, then update all the weights
     def backProp(self, target):
         self.computeError(target)
-        print('Error', self.errorList)
+        # print('Error', self.errorList)
         self.updateWeights()
-        print('weights after BP:', self.weightMatrices)
-        print('bias weights after BP:',self.biasWeights)
+        # print('weights after BP:', self.weightMatrices)
+        # print('bias weights after BP:',self.biasWeights)
         # input('BP done')
 
     def train(self, features, labels):
@@ -150,22 +157,21 @@ class NeuralNetLearner(SupervisedLearner):
         :type labels: Matrix
         """
         nFeatures = features.cols
-        # print('nfeatures', nFeatures)
         self.isContinuous = labels.value_count(0) == 0
         self.nOutputNodes = labels.value_count(0) if not self.isContinuous else 1
-        self.initHyperParamsEx2()
+        self.initHyperParamsIris(nFeatures)
         self.initWeightMatrices(nFeatures)
-        self.changeWeightsForEx2()
+        # self.changeWeightsForEx2()
 
         for e in range(self.EPOCHS):
             # if(e>0): input('pause')
             print('EPOCH', e+1)
-            # TODO - from spec: "training set randomization at each epoch". I think this just means shuffle
+            features.shuffle(labels)
             for i in range(features.rows):
                 instance = np.atleast_2d(features.row(i))
-                print('Pattern: ',instance)
+                # print('Pattern: ',instance)
                 self.forwardProp(instance)
-                print('Activations', self.activationList)
+                # print('Activations', self.activationList)
                 target = labels.row(i) if self.isContinuous else self.oneHot(labels.row(i)[0])
                 self.backProp(target)
                 self.activationList.clear() # this is needed between instances b/c we append to it throughout the algorithm
@@ -181,11 +187,15 @@ class NeuralNetLearner(SupervisedLearner):
         del pred[:]
 
         self.forwardProp(np.atleast_2d(featureRow))
-        outputNodePreds = self.activationList[self.nHiddenLayers+1]
+        outputNodePreds = self.activationList[self.nHiddenLayers+1][0]
+        print('Output nodes', outputNodePreds)
         self.activationList.clear()
 
-        if(self.isContinuous):
-            print('Pred: ', outputNodePreds[0])
-            pred += [outputNodePreds[0]]
-        else:
-            pass
+        finalLabel = outputNodePreds[0] if self.isContinuous else np.argmax(outputNodePreds)
+        # if(self.isContinuous):
+        #     finalLabel = outputNodePreds[0]
+        # else:
+        #     finalLabel = np.argmax(outputNodePreds)
+
+        print('Final Label', finalLabel)
+        pred += [finalLabel]
