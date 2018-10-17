@@ -8,13 +8,12 @@ import matplotlib.pyplot as plt
 
 '''
 For example 2 dataset (continuous):
-1. labels.value_count tells you how many output nodes to have. But for continuous, this returns 0. Need 1 output node
-2. For continuous output, target needs no modification. For nominal, must do 1-hot encoding
+DONE 1. labels.value_count tells you how many output nodes to have. But for continuous, this returns 0. Need 1 output node
+DONE 2. For continuous output, target needs no modification. For nominal, must do 1-hot encoding
 3. In predict, if it's continuous you just return whatever the output. If nominal, you return index of the highest output node (just like multiperceptron).
 '''
 
 class NeuralNetLearner(SupervisedLearner):
-    labels = []
     weightMatrices = [] #represents weight networks between layers. len(weightMatrices) = Total layers - 1
     deltaWeightMatrices = []
     biasWeights = []
@@ -24,6 +23,7 @@ class NeuralNetLearner(SupervisedLearner):
     nNodesPerHiddenLayer = None
     nHiddenLayers = None
     nOutputNodes = None
+    isContinuous = None
     EPOCHS = 3
     LEARNING_RATE = None
     MOMENTUM = 1
@@ -129,6 +129,12 @@ class NeuralNetLearner(SupervisedLearner):
             self.deltaWeightMatrices[l] = deltaW
             self.deltaBiasWeights[l] = deltaB
 
+    def oneHot(self, label):
+        target = np.zeros(self.nOutputNodes)
+        target[int(label)] = 1
+        return target
+
+
     # calc errors for all the layers first, then calc delta weights for all layers, then update all the weights
     def backProp(self, target):
         self.computeError(target)
@@ -145,13 +151,14 @@ class NeuralNetLearner(SupervisedLearner):
         """
         nFeatures = features.cols
         # print('nfeatures', nFeatures)
-        self.nOutputNodes = labels.value_count(0) if labels.value_count(0) != 0 else 1
+        self.isContinuous = labels.value_count(0) == 0
+        self.nOutputNodes = labels.value_count(0) if not self.isContinuous else 1
         self.initHyperParamsEx2()
         self.initWeightMatrices(nFeatures)
         self.changeWeightsForEx2()
 
         for e in range(self.EPOCHS):
-            if(e>0): input('pause')
+            # if(e>0): input('pause')
             print('EPOCH', e+1)
             # TODO - from spec: "training set randomization at each epoch". I think this just means shuffle
             for i in range(features.rows):
@@ -159,32 +166,26 @@ class NeuralNetLearner(SupervisedLearner):
                 print('Pattern: ',instance)
                 self.forwardProp(instance)
                 print('Activations', self.activationList)
-                self.backProp(labels.row(i))
-                self.activationList.clear() # Have a feeling this is needed between instances
-                # self.errorList.clear()
+                target = labels.row(i) if self.isContinuous else self.oneHot(labels.row(i)[0])
+                self.backProp(target)
+                self.activationList.clear() # this is needed between instances b/c we append to it throughout the algorithm
 
-        
-
-    def predict(self, features, labels):
+    # If continuous, you just return whatever the output node was.
+    # If nominal, you return index of the highest output node (just like multiperceptron).
+    def predict(self, featureRow, pred):
         """
         :type features: [float]
-        :type labels: [float]
+        :type preds: [float]
         """
-        #pick the output node/class with highest activation
         # TODO
-        del labels[:]
-        labels += [1,1,1,1,1,1,1,1,1,1,1,1]
-        
+        del pred[:]
 
+        self.forwardProp(np.atleast_2d(featureRow))
+        outputNodePreds = self.activationList[self.nHiddenLayers+1]
+        self.activationList.clear()
 
-'''
-Notes for lab:
-
-WEIGHTS
-weight matrix will be f+1 x h | f = # features and h = # of hidden nodes in latent layer. +1 for bias
-Have a weight matrix per layer (excluding input layer)
-
-DELTA WEIGHTS
-same shape as weights. may just be a local variable
-
-'''
+        if(self.isContinuous):
+            print('Pred: ', outputNodePreds[0])
+            pred += [outputNodePreds[0]]
+        else:
+            pass

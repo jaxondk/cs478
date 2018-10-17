@@ -108,7 +108,7 @@ class PerceptronLearner(SupervisedLearner):
     
     def predictOne(self, instance):
         """
-        @return: a tuple: (the instance with bias appended, the prediction for that instance)
+        @return: a tuple: (the instance with bias appended, the prediction for that instance, the net)
         """
         pattern = np.append(np.array(instance), 1) #include a bias
         if(self.debug): print('Pattern w/ bias: ', pattern)
