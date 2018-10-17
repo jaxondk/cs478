@@ -8,12 +8,12 @@ import matplotlib.pyplot as plt
 
 class NeuralNetLearner(SupervisedLearner):
     labels = []
-    weightMatrices = []
+    weightMatrices = [] #represents weight networks between layers. len(weightMatrices) = Total layers - 1
     deltaWeightMatrices = []
     biasWeights = []
-    biasDeltaWeights = []
-    activationList = []
-    errorList = [] # list of lists. Each list represents error values for the nodes in a layer
+    deltaBiasWeights = []
+    activationList = [] #List of lists. Each list represents the output/activation of the layer. Input layer included
+    errorList = [] # list of lists. Each list represents error values for the nodes in a layer. Input layer excluded (len(errorList) = len(activationList) - 1)
     nNodesPerHiddenLayer = None
     nHiddenLayers = None
     nOutputNodes = None
@@ -41,6 +41,11 @@ class NeuralNetLearner(SupervisedLearner):
         self.MOMENTUM = 0
     
     def initWeightMatrices(self, nFeatures, initVal):
+        ### Init shape of structures
+        for l in range(self.nHiddenLayers+1):
+            self.errorList.append([]) 
+            self.deltaBiasWeights.append([])
+
         ### init weight matrix for input layer to first hidden layer
         # (nFeatures x nNodesPerHiddenLayer)
         self.weightMatrices.append(np.full((nFeatures, self.nNodesPerHiddenLayer), initVal if initVal else np.random.normal()))
@@ -59,11 +64,6 @@ class NeuralNetLearner(SupervisedLearner):
         self.weightMatrices.append(np.full((self.nNodesPerHiddenLayer, self.nOutputNodes), initVal if initVal else np.random.normal()))
         self.deltaWeightMatrices.append(np.zeros((self.nNodesPerHiddenLayer, self.nOutputNodes)))
         self.biasWeights.append(np.full(self.nOutputNodes, initVal if initVal else np.random.normal()))
-
-        ### Init other structures (shape only)
-        for l in range(self.nHiddenLayers+1):
-            self.errorList.append([]) 
-            self.biasDeltaWeights.append([])
 
     def forwardProp(self, instance):
         self.activationList.append(instance) # the input nodes do not have activation f(x), just consider incoming instance as their output
@@ -99,14 +99,25 @@ class NeuralNetLearner(SupervisedLearner):
         self.computeErrorOutputLayer(target)
         for l in range(self.nHiddenLayers-1, -1, -1):
             self.computeErrorHiddenLayer(l)
+    
+    def updateWeights(self):
+        for l in range(self.nHiddenLayers, -1, -1):
+            deltaW = self.LEARNING_RATE * np.dot(self.activationList[l].T, self.errorList[l])
+            deltaB = self.LEARNING_RATE * np.dot([[1]], self.errorList[l])
+            self.weightMatrices[l] = np.array(self.weightMatrices[l]) + deltaW
+            self.biasWeights[l] = np.array(self.biasWeights[l]) + deltaB
+
+        # print('weight matrix',self.weightMatrices)
+        # print('delta matrix',self.deltaWeightMatrices)
+        # updatedWeights = np.array(self.weightMatrices) + np.array(self.deltaWeightMatrices)
+        # self.weightMatrices = updatedWeights.tolist()
 
     # calc errors for all the layers first, then calc delta weights for all layers, then update all the weights
     def backProp(self, target):
         self.computeError(target)
-        for l in range(self.nHiddenLayers, -1, -1):
-            self.deltaWeightMatrices[l] = self.LEARNING_RATE * np.dot(self.activationList[l].T, self.errorList[l])
-            # TODO - update bias weights as well
-        print('Delta weights after BP:', self.deltaWeightMatrices)
+        self.updateWeights()
+        print('weights after BP:', self.weightMatrices)
+        print('bias weights after BP:',self.biasWeights)
         input('BP done')
 
     def train(self, features, labels):
