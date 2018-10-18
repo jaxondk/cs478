@@ -174,7 +174,7 @@ class NeuralNetLearner(SupervisedLearner):
         self.initHyperParamsIris(nFeatures)
         self.initWeightMatrices(nFeatures)
 
-        prev_accuracy = 0.0
+        bssf_mse = 0.0
         noImprovementCount = 0
         for e in range(self.EPOCHS):
             # if(e>0): input('pause')
@@ -184,11 +184,11 @@ class NeuralNetLearner(SupervisedLearner):
                 self.trainModel(features.row(i), labels.row(i))
 
             accuracy, mse = self.measure_accuracy(validationFeatures, validationLabels)
-            if(accuracy <= prev_accuracy):
+            if(mse <= bssf_mse):
                 noImprovementCount += 1
             else:
                 noImprovementCount = 0
-                prev_accuracy = accuracy
+                bssf_mse = mse
             if(noImprovementCount == self.STALL_NUM_EPOCHS):
                 print('Accuracy has stalled for {0} epochs, ending training on epoch {1}'.format(self.STALL_NUM_EPOCHS, e))
                 break
