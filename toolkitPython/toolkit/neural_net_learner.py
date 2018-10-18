@@ -24,15 +24,18 @@ class NeuralNetLearner(SupervisedLearner):
     nHiddenLayers = None
     nOutputNodes = None
     isContinuous = None
-    EPOCHS = 200
+    EPOCHS = 150
     STALL_NUM_EPOCHS = 75
-    LEARNING_RATE = .1
+    LEARNING_RATE = None
     MOMENTUM = None
     # For vowel analysis only
     finalTrainMSE = []
     finalValMSE = []
     finalTestMSE = []
     epochsRequired = []
+    finalValMSE = []
+    finalTestAccuracy = []
+    valBssfMSE = None
 
     def __init__(self):
         pass
@@ -45,10 +48,11 @@ class NeuralNetLearner(SupervisedLearner):
         np.random.seed(0) 
 
     def initHyperParamsVowel(self, nFeatures):
-        self.nNodesPerHiddenLayer = nFeatures * 2
+        # self.nNodesPerHiddenLayer = nFeatures * 2
         self.nHiddenLayers = 1
         self.LEARNING_RATE = .15
         self.MOMENTUM = 0
+        np.random.seed(0) 
 
     # def initHyperParamsHW(self):
     #     self.nHiddenLayers = 1
@@ -188,11 +192,11 @@ class NeuralNetLearner(SupervisedLearner):
         noImprovementCount = 0
         trainMSE = []
         valMSE = []
-        valAccuracy = []
+        # valAccuracy = []
         testMSE = []
         for e in range(self.EPOCHS):
             # if(e>0): input('pause')
-            print('EPOCH', e+1)
+            # print('EPOCH', e+1)
             features.shuffle(labels)
             for i in range(features.rows):
                 self.trainModel(features.row(i), labels.row(i))
@@ -201,14 +205,17 @@ class NeuralNetLearner(SupervisedLearner):
             vAccuracy, vMSE = self.measure_accuracy(validationFeatures, validationLabels)
             _, tMSE = self.measure_accuracy(testFeatures, testLabels)
             trainMSE.append(trMSE)
+            print('appending {0} to trainMSE'.format(trMSE))
             valMSE.append(vMSE)
-            valAccuracy.append(vAccuracy)
+            print('appending {0} to val MSE'.format(vMSE))
             testMSE.append(tMSE)
+            print('appending {0} to test MSE'.format(tMSE))
             if(vMSE >= bssf_mse):
                 noImprovementCount += 1
             else:
                 noImprovementCount = 0
                 bssf_mse = vMSE
+                print('bssf MSE', bssf_mse)
             if(noImprovementCount == self.STALL_NUM_EPOCHS):
                 print('MSE has stalled for {0} epochs, ending training on epoch {1}'.format(self.STALL_NUM_EPOCHS, e))
                 break
@@ -219,12 +226,27 @@ class NeuralNetLearner(SupervisedLearner):
 
     #wrapper around train so that we can do some analysis
     def train(self, features, labels, validationFeatures, validationLabels, testFeatures, testLabels):
-        learningRates = [.1, .25, .5, .75, 1, 1.5]
-        for lr in learningRates:
-            self.LEARNING_RATE = lr
+        nNodesList = []
+        self.nNodesPerHiddenLayer = 1
+        bssf_mse = 9999
+        noImprovementCount = 0
+        for i in range(9):
+            nNodesList.append(self.nNodesPerHiddenLayer)
+            print('# nodes:', self.nNodesPerHiddenLayer)
             self.realTrain(features, labels, validationFeatures, validationLabels, testFeatures, testLabels)
-        # self.plotVowelMSE(self.finalTrainMSE, self.finalValMSE, self.finalTestMSE, learningRates)
-        self.plotVowelEpochs(self.epochsRequired, learningRates)
+            if(self.finalValMSE[-1] >= bssf_mse):
+                noImprovementCount += 1
+            else:
+                noImprovementCount = 0
+                bssf_mse = self.finalValMSE[-1]
+            if(noImprovementCount == 3):
+                print('Accuracy has stalled for 3 doubling of nodes, ending training on node {0}'.format(self.nNodesPerHiddenLayer))
+                break
+            self.nNodesPerHiddenLayer *= 2
+        print('finalTrainMSE:', self.finalTrainMSE)
+        print('finalValMSE:', self.finalValMSE)
+        print('finalTestMSE:', self.finalTestMSE)
+        self.plotVowelHiddenNodes(self.finalTrainMSE, self.finalValMSE, self.finalTestMSE, nNodesList)
 
     def plotIrisMSE(self, trainMSE, valMSE, valAccuracy):
         plt.plot(range(len(trainMSE)), trainMSE, label='Train MSE') # labels make a legend when you call plt.legend(...)
@@ -254,6 +276,18 @@ class NeuralNetLearner(SupervisedLearner):
         plt.ylabel('MSE')
         plt.title('VOWEL: Epochs Required vs. LR')
         plt.xticks(LRs)
+        plt.show()
+
+    def plotVowelHiddenNodes(self, trainMSE, valBssfMSE, testMSE, nNodesList):
+        # ax = plt.subplot(111)
+        plt.plot(nNodesList, trainMSE, label='Train MSE')
+        plt.plot(nNodesList, valBssfMSE, label='Val MSE')
+        plt.plot(nNodesList, testMSE, label='Test MSE')
+        plt.title('VOWEL: Final MSE vs. # Hidden Nodes')
+        plt.legend(loc='upper right')
+        plt.xlabel('Number Hidden Nodes per Layer')
+        plt.ylabel('MSE')
+        plt.xticks(nNodesList)
         plt.show()
 
     # If continuous, you just return whatever the output node was.
