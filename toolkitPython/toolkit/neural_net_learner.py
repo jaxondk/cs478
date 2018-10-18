@@ -24,8 +24,8 @@ class NeuralNetLearner(SupervisedLearner):
     nHiddenLayers = None
     nOutputNodes = None
     isContinuous = None
-    EPOCHS = 40
-    STALL_NUM_EPOCHS = 20
+    EPOCHS = 150
+    STALL_NUM_EPOCHS = 75
     LEARNING_RATE = None
     MOMENTUM = None
 
@@ -44,6 +44,11 @@ class NeuralNetLearner(SupervisedLearner):
         self.LEARNING_RATE = 1
         self.MOMENTUM = 0
 
+    def initHyperParamsVowel(self, nFeatures):
+        self.nNodesPerHiddenLayer = nFeatures * 2
+        self.nHiddenLayers = 1
+        self.LEARNING_RATE = .15
+        self.MOMENTUM = 0
 
     def initHyperParamsEx2(self):
         self.nNodesPerHiddenLayer = 3
@@ -171,7 +176,7 @@ class NeuralNetLearner(SupervisedLearner):
         nFeatures = features.cols
         self.isContinuous = labels.value_count(0) == 0
         self.nOutputNodes = labels.value_count(0) if not self.isContinuous else 1
-        self.initHyperParamsIris(nFeatures)
+        self.initHyperParamsVowel(nFeatures)
         self.initWeightMatrices(nFeatures)
 
         bssf_mse = 9999
