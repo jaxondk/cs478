@@ -24,13 +24,15 @@ class NeuralNetLearner(SupervisedLearner):
     nHiddenLayers = None
     nOutputNodes = None
     isContinuous = None
-    EPOCHS = 20
-    STALL_NUM_EPOCHS = 40
+    EPOCHS = 200
+    STALL_NUM_EPOCHS = 20
     LEARNING_RATE = .1
     MOMENTUM = None
+    # For vowel analysis only
     finalTrainMSE = []
     finalValMSE = []
     finalTestMSE = []
+    epochsRequired = []
 
     def __init__(self):
         pass
@@ -213,6 +215,7 @@ class NeuralNetLearner(SupervisedLearner):
         self.finalTrainMSE.append(trainMSE[-1])
         self.finalValMSE.append(valMSE[-1])
         self.finalTestMSE.append(testMSE[-1])
+        self.epochsRequired.append(e+1)
 
     #wrapper around train so that we can do some analysis
     def train(self, features, labels, validationFeatures, validationLabels, testFeatures, testLabels):
@@ -220,7 +223,8 @@ class NeuralNetLearner(SupervisedLearner):
         for lr in learningRates:
             self.LEARNING_RATE = lr
             self.realTrain(features, labels, validationFeatures, validationLabels, testFeatures, testLabels)
-        self.plotVowelMSE(self.finalTrainMSE, self.finalValMSE, self.finalTestMSE, learningRates)
+        # self.plotVowelMSE(self.finalTrainMSE, self.finalValMSE, self.finalTestMSE, learningRates)
+        self.plotVowelEpochs(self.epochsRequired, learningRates)
 
     def plotIrisMSE(self, trainMSE, valMSE, valAccuracy):
         plt.plot(range(len(trainMSE)), trainMSE, label='Train MSE') # labels make a legend when you call plt.legend(...)
@@ -241,6 +245,14 @@ class NeuralNetLearner(SupervisedLearner):
         plt.ylabel('MSE')
         plt.title('VOWEL: Final MSE vs. LR')
         plt.legend(loc='lower right')
+        plt.xticks(LRs)
+        plt.show()
+
+    def plotVowelEpochs(self, epochsRequired, LRs):
+        plt.plot(LRs, epochsRequired)
+        plt.xlabel('LR')
+        plt.ylabel('MSE')
+        plt.title('VOWEL: Epochs Required vs. LR')
         plt.xticks(LRs)
         plt.show()
 
