@@ -177,7 +177,7 @@ class MLSystemManager:
             test_labels = Matrix(data, train_size + validate_size, data.cols-1, data.rows - train_size - validate_size, 1)
 
             start_time = time.time()
-            learner.train(train_features, train_labels, validate_features, validate_labels)
+            learner.train(train_features, train_labels, validate_features, validate_labels, test_features, test_labels)
             elapsed_time = time.time() - start_time
             print("Time to train (in seconds): {}".format(elapsed_time))
 

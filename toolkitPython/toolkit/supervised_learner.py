@@ -8,7 +8,7 @@ import math
 
 class SupervisedLearner:
 
-    def train(self, features, labels, validationFeatures=None, validationLabels=None):
+    def train(self, features, labels, validationFeatures=None, validationLabels=None, testFeatures=None, testLabels=None):
         """
         Before you call this method, you need to divide your data
         into a feature matrix and a label matrix.

@@ -38,34 +38,34 @@ class NeuralNetLearner(SupervisedLearner):
         self.LEARNING_RATE = .1
         self.MOMENTUM = 0
 
-    def initHyperParamsHW(self):
-        self.nHiddenLayers = 1
-        self.nNodesPerHiddenLayer = 2
-        self.LEARNING_RATE = 1
-        self.MOMENTUM = 0
-
     def initHyperParamsVowel(self, nFeatures):
         self.nNodesPerHiddenLayer = nFeatures * 2
         self.nHiddenLayers = 1
-        self.LEARNING_RATE = .15
+        self.LEARNING_RATE = .13
         self.MOMENTUM = 0
 
-    def initHyperParamsEx2(self):
-        self.nNodesPerHiddenLayer = 3
-        self.nHiddenLayers = 1
-        self.LEARNING_RATE = 0.175
-        self.MOMENTUM = 0.9
+    # def initHyperParamsHW(self):
+    #     self.nHiddenLayers = 1
+    #     self.nNodesPerHiddenLayer = 2
+    #     self.LEARNING_RATE = 1
+    #     self.MOMENTUM = 0
 
-    def changeWeightsForEx2(self):
-        self.weightMatrices[0][0] = [-0.03, 0.04, 0.03]
-        self.weightMatrices[0][1] = [0.03, -0.02, 0.02]
-        self.weightMatrices[1][0] = [-0.01]
-        self.weightMatrices[1][1] = [0.03]
-        self.weightMatrices[1][2] = [0.02]
-        self.biasWeights[0] = np.array([-0.01, 0.01, -0.02])
-        self.biasWeights[1] = np.array([0.02])
-        # input('pause')
-        pass
+    # def initHyperParamsEx2(self):
+    #     self.nNodesPerHiddenLayer = 3
+    #     self.nHiddenLayers = 1
+    #     self.LEARNING_RATE = 0.175
+    #     self.MOMENTUM = 0.9
+
+    # def changeWeightsForEx2(self):
+    #     self.weightMatrices[0][0] = [-0.03, 0.04, 0.03]
+    #     self.weightMatrices[0][1] = [0.03, -0.02, 0.02]
+    #     self.weightMatrices[1][0] = [-0.01]
+    #     self.weightMatrices[1][1] = [0.03]
+    #     self.weightMatrices[1][2] = [0.02]
+    #     self.biasWeights[0] = np.array([-0.01, 0.01, -0.02])
+    #     self.biasWeights[1] = np.array([0.02])
+    #     # input('pause')
+    #     pass
     
     def initWeightMatrices(self, nFeatures, initVal=None):
         ### Init shape of structures
@@ -166,13 +166,11 @@ class NeuralNetLearner(SupervisedLearner):
         self.backProp(target)
         self.activationList.clear() # this is needed between instances b/c we append to it throughout the algorithm
 
-    def train(self, features, labels, validationFeatures, validationLabels):
+    def train(self, features, labels, validationFeatures, validationLabels, testFeatures, testLabels):
         """
         :type features: Matrix
         :type labels: Matrix
         """
-        # splitIntoValidation(self, features, labels)
-
         nFeatures = features.cols
         self.isContinuous = labels.value_count(0) == 0
         self.nOutputNodes = labels.value_count(0) if not self.isContinuous else 1
@@ -210,14 +208,7 @@ class NeuralNetLearner(SupervisedLearner):
 
         self.forwardProp(np.atleast_2d(featureRow))
         outputNodePreds = self.activationList[self.nHiddenLayers+1][0]
-        # print('Output nodes', outputNodePreds)
         self.activationList.clear()
 
         finalLabel = outputNodePreds[0] if self.isContinuous else np.argmax(outputNodePreds)
-        # if(self.isContinuous):
-        #     finalLabel = outputNodePreds[0]
-        # else:
-        #     finalLabel = np.argmax(outputNodePreds)
-
-        # print('Final Label', finalLabel)
         pred += [finalLabel]
