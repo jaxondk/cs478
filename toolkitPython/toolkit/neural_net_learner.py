@@ -222,7 +222,7 @@ class NeuralNetLearner(SupervisedLearner):
         plt.plot(LRs, testMSE, label='Test MSE') 
         plt.xlabel('LR')
         plt.ylabel('MSE')
-        plt.title('VOWEL: Final MSE vs. LR')
+        plt.title('VOWEL: Final MSE vs. LR, Stop={0} Epochs'.format(self.STALL_NUM_EPOCHS))
         plt.legend(loc='lower right')
         plt.xticks(LRs)
         plt.show()
