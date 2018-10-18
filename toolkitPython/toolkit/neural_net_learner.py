@@ -25,7 +25,7 @@ class NeuralNetLearner(SupervisedLearner):
     nOutputNodes = None
     isContinuous = None
     EPOCHS = 200
-    STALL_NUM_EPOCHS = 20
+    STALL_NUM_EPOCHS = 75
     LEARNING_RATE = .1
     MOMENTUM = None
     # For vowel analysis only
@@ -47,7 +47,7 @@ class NeuralNetLearner(SupervisedLearner):
     def initHyperParamsVowel(self, nFeatures):
         self.nNodesPerHiddenLayer = nFeatures * 2
         self.nHiddenLayers = 1
-        # self.LEARNING_RATE = .1
+        self.LEARNING_RATE = .15
         self.MOMENTUM = 0
 
     # def initHyperParamsHW(self):
