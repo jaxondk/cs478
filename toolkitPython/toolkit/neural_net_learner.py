@@ -29,13 +29,9 @@ class NeuralNetLearner(SupervisedLearner):
     LEARNING_RATE = None
     MOMENTUM = None
     # For vowel analysis only
-    finalTrainMSE = []
-    finalValMSE = []
-    finalTestMSE = []
-    epochsRequired = []
-    finalValMSE = []
-    finalTestAccuracy = []
-    valBssfMSE = None
+    bssfTrainMSE = []
+    bssfValMSE = []
+    bssfTestMSE = []
 
     def __init__(self):
         pass
@@ -49,35 +45,21 @@ class NeuralNetLearner(SupervisedLearner):
 
     def initHyperParamsVowel(self, nFeatures):
         # self.nNodesPerHiddenLayer = nFeatures * 2
+        self.nNodesPerHiddenLayer = 1
         self.nHiddenLayers = 1
         self.LEARNING_RATE = .15
         self.MOMENTUM = 0
-        np.random.seed(0) 
-
-    # def initHyperParamsHW(self):
-    #     self.nHiddenLayers = 1
-    #     self.nNodesPerHiddenLayer = 2
-    #     self.LEARNING_RATE = 1
-    #     self.MOMENTUM = 0
-
-
-    # def initHyperParamsEx2(self):
-    #     self.nNodesPerHiddenLayer = 3
-    #     self.nHiddenLayers = 1
-    #     self.LEARNING_RATE = 0.175
-    #     self.MOMENTUM = 0.9
-
-    # def changeWeightsForEx2(self):
-    #     self.weightMatrices[0][0] = [-0.03, 0.04, 0.03]
-    #     self.weightMatrices[0][1] = [0.03, -0.02, 0.02]
-    #     self.weightMatrices[1][0] = [-0.01]
-    #     self.weightMatrices[1][1] = [0.03]
-    #     self.weightMatrices[1][2] = [0.02]
-    #     self.biasWeights[0] = np.array([-0.01, 0.01, -0.02])
-    #     self.biasWeights[1] = np.array([0.02])
-    #     # input('pause')
+        self.STALL_NUM_EPOCHS = 75
+        self.EPOCHS = 400
+        np.random.seed(0)
     
     def initWeightMatrices(self, nFeatures, initVal=None):
+        self.weightMatrices.clear()
+        self.deltaWeightMatrices.clear()
+        self.biasWeights.clear()
+        self.deltaBiasWeights.clear()
+        self.errorList.clear()
+
         ### Init shape of structures
         for _ in range(self.nHiddenLayers+1):
             self.errorList.append([]) 
@@ -118,12 +100,8 @@ class NeuralNetLearner(SupervisedLearner):
 
     # sigmoid activation
     def activationFromInput(self, nodeInput, layer):
-        # print('node input', nodeInput)
         net = np.dot(nodeInput, self.weightMatrices[layer]) + self.biasWeights[layer] 
-        # print('Net: ', net)
         activation = 1/(1+np.exp(-net))
-        # print('Activation: ', activation)
-        # input('pause')
         return activation
 
     # accurate for hw
@@ -131,7 +109,6 @@ class NeuralNetLearner(SupervisedLearner):
         # TODO - convert target to 1 hot encoding. I think this is needed when you have more than one output node
         out = self.activationList[self.nHiddenLayers+1]
         self.errorList[self.nHiddenLayers] = (target - out) * out * (1 - out)
-        # print('Error list after doing output layer error:', self.errorList)
 
     # accurate for hw
     def computeErrorHiddenLayer(self, j):
@@ -161,17 +138,11 @@ class NeuralNetLearner(SupervisedLearner):
     # calc errors for all the layers first, then calc delta weights for all layers, then update all the weights
     def backProp(self, target):
         self.computeError(target)
-        # print('Error', self.errorList)
         self.updateWeights()
-        # print('weights after BP:', self.weightMatrices)
-        # print('bias weights after BP:',self.biasWeights)
-        # input('BP done')
 
     def trainModel(self, row, label):
         instance = np.atleast_2d(row)
-        # print('Pattern: ',instance)
         self.forwardProp(instance)
-        # print('Activations', self.activationList)
         target = label if self.isContinuous else self.oneHot(label[0])
         self.backProp(target)
         self.activationList.clear() # this is needed between instances b/c we append to it throughout the algorithm
@@ -185,15 +156,14 @@ class NeuralNetLearner(SupervisedLearner):
         nFeatures = features.cols
         self.isContinuous = labels.value_count(0) == 0
         self.nOutputNodes = labels.value_count(0) if not self.isContinuous else 1
-        self.initHyperParamsVowel(nFeatures)
+        if(self.nNodesPerHiddenLayer == 1):
+            self.initHyperParamsVowel(nFeatures)
         self.initWeightMatrices(nFeatures)
 
-        bssf_mse = 99999
+        bssfTrainMSE = 99999
+        bssfValMSE = 99999
+        bssfTestMSE = 99999
         noImprovementCount = 0
-        trainMSE = []
-        valMSE = []
-        # valAccuracy = []
-        testMSE = []
         for e in range(self.EPOCHS):
             # if(e>0): input('pause')
             # print('EPOCH', e+1)
@@ -201,52 +171,44 @@ class NeuralNetLearner(SupervisedLearner):
             for i in range(features.rows):
                 self.trainModel(features.row(i), labels.row(i))
 
-            trAccuracy, trMSE = self.measure_accuracy(features, labels)
-            vAccuracy, vMSE = self.measure_accuracy(validationFeatures, validationLabels)
+            _, trMSE = self.measure_accuracy(features, labels)
+            _, vMSE = self.measure_accuracy(validationFeatures, validationLabels)
             _, tMSE = self.measure_accuracy(testFeatures, testLabels)
-            trainMSE.append(trMSE)
-            print('appending {0} to trainMSE'.format(trMSE))
-            valMSE.append(vMSE)
-            print('appending {0} to val MSE'.format(vMSE))
-            testMSE.append(tMSE)
-            print('appending {0} to test MSE'.format(tMSE))
-            if(vMSE >= bssf_mse):
+            if(vMSE >= bssfValMSE):
                 noImprovementCount += 1
             else:
                 noImprovementCount = 0
-                bssf_mse = vMSE
-                print('bssf MSE', bssf_mse)
+                bssfTrainMSE = trMSE
+                bssfValMSE = vMSE
+                bssfTestMSE = tMSE
             if(noImprovementCount == self.STALL_NUM_EPOCHS):
                 print('MSE has stalled for {0} epochs, ending training on epoch {1}'.format(self.STALL_NUM_EPOCHS, e))
                 break
-        self.finalTrainMSE.append(trainMSE[-1])
-        self.finalValMSE.append(valMSE[-1])
-        self.finalTestMSE.append(testMSE[-1])
-        self.epochsRequired.append(e+1)
+        
+        self.bssfTrainMSE.append(bssfTrainMSE)
+        self.bssfValMSE.append(bssfValMSE)
+        self.bssfTestMSE.append(bssfTestMSE)
 
-    #wrapper around train so that we can do some analysis
+    # Wrapper around train so that we can do some analysis
     def train(self, features, labels, validationFeatures, validationLabels, testFeatures, testLabels):
         nNodesList = []
-        self.nNodesPerHiddenLayer = 1
-        bssf_mse = 9999
+        prev_bssf = 9999
         noImprovementCount = 0
-        for i in range(9):
-            nNodesList.append(self.nNodesPerHiddenLayer)
+        self.nNodesPerHiddenLayer = 1
+        for _ in range(9):
             print('# nodes:', self.nNodesPerHiddenLayer)
             self.realTrain(features, labels, validationFeatures, validationLabels, testFeatures, testLabels)
-            if(self.finalValMSE[-1] >= bssf_mse):
+            nNodesList.append(self.nNodesPerHiddenLayer)
+            if(self.bssfValMSE[-1] >= prev_bssf):
                 noImprovementCount += 1
             else:
                 noImprovementCount = 0
-                bssf_mse = self.finalValMSE[-1]
+                prev_bssf = self.bssfValMSE[-1]
             if(noImprovementCount == 3):
                 print('Accuracy has stalled for 3 doubling of nodes, ending training on node {0}'.format(self.nNodesPerHiddenLayer))
                 break
             self.nNodesPerHiddenLayer *= 2
-        print('finalTrainMSE:', self.finalTrainMSE)
-        print('finalValMSE:', self.finalValMSE)
-        print('finalTestMSE:', self.finalTestMSE)
-        self.plotVowelHiddenNodes(self.finalTrainMSE, self.finalValMSE, self.finalTestMSE, nNodesList)
+        self.plotVowelHiddenNodes(self.bssfTrainMSE, self.bssfValMSE, self.bssfTestMSE, nNodesList)
 
     def plotIrisMSE(self, trainMSE, valMSE, valAccuracy):
         plt.plot(range(len(trainMSE)), trainMSE, label='Train MSE') # labels make a legend when you call plt.legend(...)
@@ -278,12 +240,11 @@ class NeuralNetLearner(SupervisedLearner):
         plt.xticks(LRs)
         plt.show()
 
-    def plotVowelHiddenNodes(self, trainMSE, valBssfMSE, testMSE, nNodesList):
-        # ax = plt.subplot(111)
-        plt.plot(nNodesList, trainMSE, label='Train MSE')
-        plt.plot(nNodesList, valBssfMSE, label='Val MSE')
-        plt.plot(nNodesList, testMSE, label='Test MSE')
-        plt.title('VOWEL: Final MSE vs. # Hidden Nodes')
+    def plotVowelHiddenNodes(self, bssfTrainMSE, bssfValMSE, bssfTestMSE, nNodesList):
+        plt.plot(nNodesList, bssfTrainMSE, label='Train MSE')
+        plt.plot(nNodesList, bssfValMSE, label='Val MSE')
+        plt.plot(nNodesList, bssfTestMSE, label='Test MSE')
+        plt.title('VOWEL: Final MSE v. Hidden Nodes, LR={0} Stop={1} Epochs'.format(self.LEARNING_RATE, self.STALL_NUM_EPOCHS))
         plt.legend(loc='upper right')
         plt.xlabel('Number Hidden Nodes per Layer')
         plt.ylabel('MSE')
@@ -302,14 +263,7 @@ class NeuralNetLearner(SupervisedLearner):
 
         self.forwardProp(np.atleast_2d(featureRow))
         outputNodePreds = self.activationList[self.nHiddenLayers+1][0]
-        # print('Output nodes', outputNodePreds)
         self.activationList.clear()
 
         finalLabel = outputNodePreds[0] if self.isContinuous else np.argmax(outputNodePreds)
-        # if(self.isContinuous):
-        #     finalLabel = outputNodePreds[0]
-        # else:
-        #     finalLabel = np.argmax(outputNodePreds)
-
-        # print('Final Label', finalLabel)
         pred += [finalLabel]
