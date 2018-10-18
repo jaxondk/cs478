@@ -174,7 +174,7 @@ class NeuralNetLearner(SupervisedLearner):
         self.initHyperParamsIris(nFeatures)
         self.initWeightMatrices(nFeatures)
 
-        bssf_mse = 0.0
+        bssf_mse = 9999
         noImprovementCount = 0
         for e in range(self.EPOCHS):
             # if(e>0): input('pause')
