@@ -24,9 +24,9 @@ class NeuralNetLearner(SupervisedLearner):
     nHiddenLayers = None
     nOutputNodes = None
     isContinuous = None
-    EPOCHS = 20
-    STALL_NUM_EPOCHS = 40
-    LEARNING_RATE = .1
+    EPOCHS = 20 #ACTUALLY SET IN initHyperParamsVowel!
+    STALL_NUM_EPOCHS = 40 #ACTUALLY SET IN initHyperParamsVowel!
+    LEARNING_RATE = .1 #ACTUALLY SET IN train wrapper f(x)!
     MOMENTUM = None
     finalTrainMSE = []
     finalValMSE = []
@@ -46,31 +46,11 @@ class NeuralNetLearner(SupervisedLearner):
         self.nNodesPerHiddenLayer = nFeatures * 2
         self.nHiddenLayers = 1
         # self.LEARNING_RATE = .1
+        self.STALL_NUM_EPOCHS = 75
+        self.EPOCHS = 150
         self.MOMENTUM = 0
+        np.random.seed(0)
 
-    # def initHyperParamsHW(self):
-    #     self.nHiddenLayers = 1
-    #     self.nNodesPerHiddenLayer = 2
-    #     self.LEARNING_RATE = 1
-    #     self.MOMENTUM = 0
-
-
-    # def initHyperParamsEx2(self):
-    #     self.nNodesPerHiddenLayer = 3
-    #     self.nHiddenLayers = 1
-    #     self.LEARNING_RATE = 0.175
-    #     self.MOMENTUM = 0.9
-
-    # def changeWeightsForEx2(self):
-    #     self.weightMatrices[0][0] = [-0.03, 0.04, 0.03]
-    #     self.weightMatrices[0][1] = [0.03, -0.02, 0.02]
-    #     self.weightMatrices[1][0] = [-0.01]
-    #     self.weightMatrices[1][1] = [0.03]
-    #     self.weightMatrices[1][2] = [0.02]
-    #     self.biasWeights[0] = np.array([-0.01, 0.01, -0.02])
-    #     self.biasWeights[1] = np.array([0.02])
-    #     # input('pause')
-    
     def initWeightMatrices(self, nFeatures, initVal=None):
         ### Init shape of structures
         for _ in range(self.nHiddenLayers+1):
@@ -213,10 +193,13 @@ class NeuralNetLearner(SupervisedLearner):
         self.finalTrainMSE.append(trainMSE[-1])
         self.finalValMSE.append(valMSE[-1])
         self.finalTestMSE.append(testMSE[-1])
+        print('final train MSE', self.finalTrainMSE)
+        print('final val MSE', self.finalValMSE)
+        print('final test MSE', self.finalTestMSE)
 
     #wrapper around train so that we can do some analysis
     def train(self, features, labels, validationFeatures, validationLabels, testFeatures, testLabels):
-        learningRates = [.1, .25, .5, .75, 1, 1.5]
+        learningRates = [.1, .15, .25, .5, .75, 1]
         for lr in learningRates:
             self.LEARNING_RATE = lr
             self.realTrain(features, labels, validationFeatures, validationLabels, testFeatures, testLabels)
