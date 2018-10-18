@@ -24,10 +24,10 @@ class NeuralNetLearner(SupervisedLearner):
     nHiddenLayers = None
     nOutputNodes = None
     isContinuous = None
-    EPOCHS = 200
-    STALL_NUM_EPOCHS = 20
-    LEARNING_RATE = .1
-    MOMENTUM = None
+    EPOCHS = None
+    STALL_NUM_EPOCHS = None # set in initHyperParamsVowel
+    LEARNING_RATE = None # set in initHyperParamsVowel
+    MOMENTUM = None 
     # For vowel analysis only
     finalTrainMSE = []
     finalValMSE = []
@@ -47,31 +47,11 @@ class NeuralNetLearner(SupervisedLearner):
     def initHyperParamsVowel(self, nFeatures):
         self.nNodesPerHiddenLayer = nFeatures * 2
         self.nHiddenLayers = 1
-        # self.LEARNING_RATE = .1
+        self.LEARNING_RATE = .15
         self.MOMENTUM = 0
-
-    # def initHyperParamsHW(self):
-    #     self.nHiddenLayers = 1
-    #     self.nNodesPerHiddenLayer = 2
-    #     self.LEARNING_RATE = 1
-    #     self.MOMENTUM = 0
-
-
-    # def initHyperParamsEx2(self):
-    #     self.nNodesPerHiddenLayer = 3
-    #     self.nHiddenLayers = 1
-    #     self.LEARNING_RATE = 0.175
-    #     self.MOMENTUM = 0.9
-
-    # def changeWeightsForEx2(self):
-    #     self.weightMatrices[0][0] = [-0.03, 0.04, 0.03]
-    #     self.weightMatrices[0][1] = [0.03, -0.02, 0.02]
-    #     self.weightMatrices[1][0] = [-0.01]
-    #     self.weightMatrices[1][1] = [0.03]
-    #     self.weightMatrices[1][2] = [0.02]
-    #     self.biasWeights[0] = np.array([-0.01, 0.01, -0.02])
-    #     self.biasWeights[1] = np.array([0.02])
-    #     # input('pause')
+        self.STALL_NUM_EPOCHS = 75
+        self.EPOCHS = 400
+        np.random.seed(0)
     
     def initWeightMatrices(self, nFeatures, initVal=None):
         ### Init shape of structures
@@ -186,44 +166,45 @@ class NeuralNetLearner(SupervisedLearner):
 
         bssf_mse = 99999
         noImprovementCount = 0
-        trainMSE = []
-        valMSE = []
-        valAccuracy = []
-        testMSE = []
+        # trainMSE = [] # For vowel MSE vs. LR analysis only
+        # valMSE = [] # For vowel MSE vs. LR analysis only
+        # valAccuracy = []  # For iris plot only
+        # testMSE = [] # For vowel MSE vs. LR analysis only
         for e in range(self.EPOCHS):
             # if(e>0): input('pause')
-            print('EPOCH', e+1)
+            # print('EPOCH', e+1)
             features.shuffle(labels)
             for i in range(features.rows):
                 self.trainModel(features.row(i), labels.row(i))
 
-            trAccuracy, trMSE = self.measure_accuracy(features, labels)
+            # _, trMSE = self.measure_accuracy(features, labels) # For vowel MSE vs. LR analysis only
             vAccuracy, vMSE = self.measure_accuracy(validationFeatures, validationLabels)
-            _, tMSE = self.measure_accuracy(testFeatures, testLabels)
-            trainMSE.append(trMSE)
-            valMSE.append(vMSE)
-            valAccuracy.append(vAccuracy)
-            testMSE.append(tMSE)
+            # _, tMSE = self.measure_accuracy(testFeatures, testLabels) # For vowel MSE vs. LR analysis only
+            # trainMSE.append(trMSE) # For vowel MSE vs. LR analysis only
+            # valMSE.append(vMSE) # For vowel MSE vs. LR analysis only
+            # valAccuracy.append(vAccuracy) # For iris plot only
+            # testMSE.append(tMSE) # For vowel MSE vs. LR analysis only
             if(vMSE >= bssf_mse):
                 noImprovementCount += 1
             else:
                 noImprovementCount = 0
                 bssf_mse = vMSE
             if(noImprovementCount == self.STALL_NUM_EPOCHS):
-                print('MSE has stalled for {0} epochs, ending training on epoch {1}'.format(self.STALL_NUM_EPOCHS, e))
+                # print('MSE has stalled for {0} epochs, ending training on epoch {1}'.format(self.STALL_NUM_EPOCHS, e))
                 break
-        self.finalTrainMSE.append(trainMSE[-1])
-        self.finalValMSE.append(valMSE[-1])
-        self.finalTestMSE.append(testMSE[-1])
+        # self.finalTrainMSE.append(trainMSE[-1]) # For vowel MSE vs. LR analysis only
+        # self.finalValMSE.append(valMSE[-1]) # For vowel MSE vs. LR analysis only
+        # self.finalTestMSE.append(testMSE[-1]) # For vowel MSE vs. LR analysis only
         self.epochsRequired.append(e+1)
 
     #wrapper around train so that we can do some analysis
     def train(self, features, labels, validationFeatures, validationLabels, testFeatures, testLabels):
-        learningRates = [.1, .25, .5, .75, 1, 1.5]
+        learningRates = [.1, .15, .25, .5, .75, 1]
         for lr in learningRates:
+            print('LR:', lr)
             self.LEARNING_RATE = lr
             self.realTrain(features, labels, validationFeatures, validationLabels, testFeatures, testLabels)
-        # self.plotVowelMSE(self.finalTrainMSE, self.finalValMSE, self.finalTestMSE, learningRates)
+        # self.plotVowelMSE(self.finalTrainMSE, self.finalValMSE, self.finalTestMSE, learningRates) # For vowel MSE vs. LR analysis only
         self.plotVowelEpochs(self.epochsRequired, learningRates)
 
     def plotIrisMSE(self, trainMSE, valMSE, valAccuracy):
@@ -251,8 +232,8 @@ class NeuralNetLearner(SupervisedLearner):
     def plotVowelEpochs(self, epochsRequired, LRs):
         plt.plot(LRs, epochsRequired)
         plt.xlabel('LR')
-        plt.ylabel('MSE')
-        plt.title('VOWEL: Epochs Required vs. LR')
+        plt.ylabel('Epochs')
+        plt.title('VOWEL: Epochs Required vs. LR, Stop={0} Epochs'.format(self.STALL_NUM_EPOCHS))
         plt.xticks(LRs)
         plt.show()
 
