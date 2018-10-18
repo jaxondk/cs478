@@ -37,15 +37,15 @@ class NeuralNetLearner(SupervisedLearner):
     def __init__(self):
         pass
 
-    def initHyperParamsIris(self, nFeatures):
-        self.nNodesPerHiddenLayer = nFeatures * 2
-        self.nHiddenLayers = 1
-        self.LEARNING_RATE = .1
-        self.MOMENTUM = 0
-        np.random.seed(0) 
+    # def initHyperParamsIris(self, nFeatures):
+    #     self.nNodesPerHiddenLayer = nFeatures * 2
+    #     self.nHiddenLayers = 1
+    #     self.LEARNING_RATE = .1
+    #     self.MOMENTUM = 0
+    #     np.random.seed(0) 
 
     def initHyperParamsVowel(self, nFeatures):
-        self.nNodesPerHiddenLayer = nFeatures * 2
+        self.nNodesPerHiddenLayer = 64
         self.nHiddenLayers = 1
         self.LEARNING_RATE = .15
         self.MOMENTUM = 0
@@ -54,6 +54,12 @@ class NeuralNetLearner(SupervisedLearner):
         np.random.seed(0)
     
     def initWeightMatrices(self, nFeatures, initVal=None):
+        self.weightMatrices.clear()
+        self.deltaWeightMatrices.clear()
+        self.biasWeights.clear()
+        self.deltaBiasWeights.clear()
+        self.errorList.clear()
+
         ### Init shape of structures
         for _ in range(self.nHiddenLayers+1):
             self.errorList.append([]) 
