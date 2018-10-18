@@ -94,26 +94,19 @@ class NeuralNetLearner(SupervisedLearner):
 
     # sigmoid activation
     def activationFromInput(self, nodeInput, layer):
-        # print('node input', nodeInput)
         net = np.dot(nodeInput, self.weightMatrices[layer]) + self.biasWeights[layer] 
-        # print('Net: ', net)
         activation = 1/(1+np.exp(-net))
-        # print('Activation: ', activation)
-        # input('pause')
         return activation
 
-    # accurate for hw
     def computeErrorOutputLayer(self, target):
         # TODO - convert target to 1 hot encoding. I think this is needed when you have more than one output node
         out = self.activationList[self.nHiddenLayers+1]
         self.errorList[self.nHiddenLayers] = (target - out) * out * (1 - out)
-        # print('Error list after doing output layer error:', self.errorList)
 
-    # accurate for hw
     def computeErrorHiddenLayer(self, j):
         error = np.dot(self.errorList[j+1], self.weightMatrices[j+1].T) * (self.activationList[j+1] * (1 - self.activationList[j+1]))
         self.errorList[j] = error
-    # accurate for hw
+
     def computeError(self, target):
         self.computeErrorOutputLayer(target)
         for l in range(self.nHiddenLayers-1, -1, -1):
@@ -134,20 +127,13 @@ class NeuralNetLearner(SupervisedLearner):
         return target
 
 
-    # calc errors for all the layers first, then calc delta weights for all layers, then update all the weights
     def backProp(self, target):
         self.computeError(target)
-        # print('Error', self.errorList)
         self.updateWeights()
-        # print('weights after BP:', self.weightMatrices)
-        # print('bias weights after BP:',self.biasWeights)
-        # input('BP done')
 
     def trainModel(self, row, label):
         instance = np.atleast_2d(row)
-        # print('Pattern: ',instance)
         self.forwardProp(instance)
-        # print('Activations', self.activationList)
         target = label if self.isContinuous else self.oneHot(label[0])
         self.backProp(target)
         self.activationList.clear() # this is needed between instances b/c we append to it throughout the algorithm
@@ -166,10 +152,6 @@ class NeuralNetLearner(SupervisedLearner):
 
         bssf_mse = 99999
         noImprovementCount = 0
-        # trainMSE = [] # For vowel MSE vs. LR analysis only
-        # valMSE = [] # For vowel MSE vs. LR analysis only
-        # valAccuracy = []  # For iris plot only
-        # testMSE = [] # For vowel MSE vs. LR analysis only
         for e in range(self.EPOCHS):
             # if(e>0): input('pause')
             # print('EPOCH', e+1)
@@ -177,13 +159,7 @@ class NeuralNetLearner(SupervisedLearner):
             for i in range(features.rows):
                 self.trainModel(features.row(i), labels.row(i))
 
-            # _, trMSE = self.measure_accuracy(features, labels) # For vowel MSE vs. LR analysis only
-            vAccuracy, vMSE = self.measure_accuracy(validationFeatures, validationLabels)
-            # _, tMSE = self.measure_accuracy(testFeatures, testLabels) # For vowel MSE vs. LR analysis only
-            # trainMSE.append(trMSE) # For vowel MSE vs. LR analysis only
-            # valMSE.append(vMSE) # For vowel MSE vs. LR analysis only
-            # valAccuracy.append(vAccuracy) # For iris plot only
-            # testMSE.append(tMSE) # For vowel MSE vs. LR analysis only
+            _, vMSE = self.measure_accuracy(validationFeatures, validationLabels)
             if(vMSE >= bssf_mse):
                 noImprovementCount += 1
             else:
@@ -192,9 +168,6 @@ class NeuralNetLearner(SupervisedLearner):
             if(noImprovementCount == self.STALL_NUM_EPOCHS):
                 # print('MSE has stalled for {0} epochs, ending training on epoch {1}'.format(self.STALL_NUM_EPOCHS, e))
                 break
-        # self.finalTrainMSE.append(trainMSE[-1]) # For vowel MSE vs. LR analysis only
-        # self.finalValMSE.append(valMSE[-1]) # For vowel MSE vs. LR analysis only
-        # self.finalTestMSE.append(testMSE[-1]) # For vowel MSE vs. LR analysis only
         self.epochsRequired.append(e+1)
 
     #wrapper around train so that we can do some analysis
@@ -249,14 +222,7 @@ class NeuralNetLearner(SupervisedLearner):
 
         self.forwardProp(np.atleast_2d(featureRow))
         outputNodePreds = self.activationList[self.nHiddenLayers+1][0]
-        # print('Output nodes', outputNodePreds)
         self.activationList.clear()
 
         finalLabel = outputNodePreds[0] if self.isContinuous else np.argmax(outputNodePreds)
-        # if(self.isContinuous):
-        #     finalLabel = outputNodePreds[0]
-        # else:
-        #     finalLabel = np.argmax(outputNodePreds)
-
-        # print('Final Label', finalLabel)
         pred += [finalLabel]
