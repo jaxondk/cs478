@@ -48,9 +48,9 @@ class NeuralNetLearner(SupervisedLearner):
         self.nNodesPerHiddenLayer = 64
         self.nHiddenLayers = 1
         self.LEARNING_RATE = .15
-        self.MOMENTUM = 0
-        self.STALL_NUM_EPOCHS = 75
-        self.EPOCHS = 400
+        # self.MOMENTUM = 0
+        self.STALL_NUM_EPOCHS = 20
+        self.EPOCHS = 200
         np.random.seed(0)
     
     def initWeightMatrices(self, nFeatures, initVal=None):
@@ -178,13 +178,15 @@ class NeuralNetLearner(SupervisedLearner):
 
     #wrapper around train so that we can do some analysis
     def train(self, features, labels, validationFeatures, validationLabels, testFeatures, testLabels):
-        learningRates = [.1, .15, .25, .5, .75, 1]
-        for lr in learningRates:
-            print('LR:', lr)
-            self.LEARNING_RATE = lr
+        momentums = np.linspace(0., 1, 11) #[.1, .25, .5, .9, 1]
+        for m in momentums:
+            print('Momentum:', m)
+            self.LEARNING_RATE = m
+            self.MOMENTUM = m
             self.realTrain(features, labels, validationFeatures, validationLabels, testFeatures, testLabels)
         # self.plotVowelMSE(self.finalTrainMSE, self.finalValMSE, self.finalTestMSE, learningRates) # For vowel MSE vs. LR analysis only
-        self.plotVowelEpochs(self.epochsRequired, learningRates)
+        # self.plotVowelEpochs(self.epochsRequired, learningRates)
+        self.plotVowelMomentums(self.epochsRequired, momentums)
 
     def plotIrisMSE(self, trainMSE, valMSE, valAccuracy):
         plt.plot(range(len(trainMSE)), trainMSE, label='Train MSE') # labels make a legend when you call plt.legend(...)
@@ -214,6 +216,14 @@ class NeuralNetLearner(SupervisedLearner):
         plt.ylabel('Epochs')
         plt.title('VOWEL: Epochs Required vs. LR, Stop={0} Epochs'.format(self.STALL_NUM_EPOCHS))
         plt.xticks(LRs)
+        plt.show()
+
+    def plotVowelMomentums(self, epochsRequired, momentums):
+        plt.plot(momentums, epochsRequired)
+        plt.xlabel('Momentum')
+        plt.ylabel('Epochs')
+        plt.title('VOWEL: Epochs Required vs. Momentum, Stop={0} Epochs'.format(self.STALL_NUM_EPOCHS))
+        plt.xticks(momentums)
         plt.show()
 
     # If continuous, you just return whatever the output node was.
