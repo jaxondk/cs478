@@ -36,12 +36,12 @@ class NeuralNetLearner(SupervisedLearner):
     def __init__(self):
         pass
 
-    def initHyperParamsIris(self, nFeatures):
-        self.nNodesPerHiddenLayer = nFeatures * 2
-        self.nHiddenLayers = 1
-        self.LEARNING_RATE = .1
-        self.MOMENTUM = 0
-        np.random.seed(0) 
+    # def initHyperParamsIris(self, nFeatures):
+    #     self.nNodesPerHiddenLayer = nFeatures * 2
+    #     self.nHiddenLayers = 1
+    #     self.LEARNING_RATE = .1
+    #     self.MOMENTUM = 0
+    #     np.random.seed(0) 
 
     def initHyperParamsVowel(self, nFeatures):
         # self.nNodesPerHiddenLayer = nFeatures * 2
@@ -104,17 +104,15 @@ class NeuralNetLearner(SupervisedLearner):
         activation = 1/(1+np.exp(-net))
         return activation
 
-    # accurate for hw
     def computeErrorOutputLayer(self, target):
         # TODO - convert target to 1 hot encoding. I think this is needed when you have more than one output node
         out = self.activationList[self.nHiddenLayers+1]
         self.errorList[self.nHiddenLayers] = (target - out) * out * (1 - out)
 
-    # accurate for hw
     def computeErrorHiddenLayer(self, j):
         error = np.dot(self.errorList[j+1], self.weightMatrices[j+1].T) * (self.activationList[j+1] * (1 - self.activationList[j+1]))
         self.errorList[j] = error
-    # accurate for hw
+
     def computeError(self, target):
         self.computeErrorOutputLayer(target)
         for l in range(self.nHiddenLayers-1, -1, -1):
@@ -134,8 +132,6 @@ class NeuralNetLearner(SupervisedLearner):
         target[int(label)] = 1
         return target
 
-
-    # calc errors for all the layers first, then calc delta weights for all layers, then update all the weights
     def backProp(self, target):
         self.computeError(target)
         self.updateWeights()
