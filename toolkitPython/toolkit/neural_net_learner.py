@@ -5,14 +5,6 @@ from .matrix import Matrix
 import numpy as np
 import matplotlib.pyplot as plt
 
-
-'''
-For example 2 dataset (continuous):
-DONE 1. labels.value_count tells you how many output nodes to have. But for continuous, this returns 0. Need 1 output node
-DONE 2. For continuous output, target needs no modification. For nominal, must do 1-hot encoding
-DONE 3. In predict, if it's continuous you just return whatever the output. If nominal, you return index of the highest output node (just like multiperceptron).
-'''
-
 class NeuralNetLearner(SupervisedLearner):
     weightMatrices = [] #represents weight networks between layers. len(weightMatrices) = Total layers - 1
     deltaWeightMatrices = []
@@ -38,11 +30,14 @@ class NeuralNetLearner(SupervisedLearner):
         self.LEARNING_RATE = .1
         self.MOMENTUM = 0
 
-    def initHyperParamsVowel(self, nFeatures):
-        self.nNodesPerHiddenLayer = nFeatures * 2
-        self.nHiddenLayers = 1
-        self.LEARNING_RATE = .13
+    def initHyperParamsVowel(self):
+        self.nNodesPerHiddenLayer = 32
+        self.nHiddenLayers = 4
+        self.LEARNING_RATE = .15
         self.MOMENTUM = 0
+        self.STALL_NUM_EPOCHS = 75
+        self.EPOCHS = 400
+        np.random.seed(0)
 
     # def initHyperParamsHW(self):
     #     self.nHiddenLayers = 1
@@ -68,6 +63,12 @@ class NeuralNetLearner(SupervisedLearner):
     #     pass
     
     def initWeightMatrices(self, nFeatures, initVal=None):
+        self.weightMatrices.clear()
+        self.deltaWeightMatrices.clear()
+        self.biasWeights.clear()
+        self.deltaBiasWeights.clear()
+        self.errorList.clear()
+
         ### Init shape of structures
         for _ in range(self.nHiddenLayers+1):
             self.errorList.append([]) 
@@ -108,26 +109,18 @@ class NeuralNetLearner(SupervisedLearner):
 
     # sigmoid activation
     def activationFromInput(self, nodeInput, layer):
-        # print('node input', nodeInput)
         net = np.dot(nodeInput, self.weightMatrices[layer]) + self.biasWeights[layer] 
-        # print('Net: ', net)
         activation = 1/(1+np.exp(-net))
-        # print('Activation: ', activation)
-        # input('pause')
         return activation
 
-    # accurate for hw
     def computeErrorOutputLayer(self, target):
-        # TODO - convert target to 1 hot encoding. I think this is needed when you have more than one output node
         out = self.activationList[self.nHiddenLayers+1]
         self.errorList[self.nHiddenLayers] = (target - out) * out * (1 - out)
-        # print('Error list after doing output layer error:', self.errorList)
 
-    # accurate for hw
     def computeErrorHiddenLayer(self, j):
         error = np.dot(self.errorList[j+1], self.weightMatrices[j+1].T) * (self.activationList[j+1] * (1 - self.activationList[j+1]))
         self.errorList[j] = error
-    # accurate for hw
+
     def computeError(self, target):
         self.computeErrorOutputLayer(target)
         for l in range(self.nHiddenLayers-1, -1, -1):
@@ -147,21 +140,13 @@ class NeuralNetLearner(SupervisedLearner):
         target[int(label)] = 1
         return target
 
-
-    # calc errors for all the layers first, then calc delta weights for all layers, then update all the weights
     def backProp(self, target):
         self.computeError(target)
-        # print('Error', self.errorList)
         self.updateWeights()
-        # print('weights after BP:', self.weightMatrices)
-        # print('bias weights after BP:',self.biasWeights)
-        # input('BP done')
 
     def trainModel(self, row, label):
         instance = np.atleast_2d(row)
-        # print('Pattern: ',instance)
         self.forwardProp(instance)
-        # print('Activations', self.activationList)
         target = label if self.isContinuous else self.oneHot(label[0])
         self.backProp(target)
         self.activationList.clear() # this is needed between instances b/c we append to it throughout the algorithm
@@ -174,14 +159,14 @@ class NeuralNetLearner(SupervisedLearner):
         nFeatures = features.cols
         self.isContinuous = labels.value_count(0) == 0
         self.nOutputNodes = labels.value_count(0) if not self.isContinuous else 1
-        self.initHyperParamsVowel(nFeatures)
+        self.initHyperParamsVowel()
         self.initWeightMatrices(nFeatures)
 
         bssf_mse = 9999
         noImprovementCount = 0
         for e in range(self.EPOCHS):
             # if(e>0): input('pause')
-            print('EPOCH', e+1)
+            # print('EPOCH', e+1)
             features.shuffle(labels)
             for i in range(features.rows):
                 self.trainModel(features.row(i), labels.row(i))
