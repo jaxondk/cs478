@@ -43,9 +43,8 @@ class NeuralNetLearner(SupervisedLearner):
     #     self.MOMENTUM = 0
     #     np.random.seed(0) 
 
-    def initHyperParamsVowel(self, nFeatures):
-        # self.nNodesPerHiddenLayer = nFeatures * 2
-        self.nNodesPerHiddenLayer = 1
+    def initHyperParamsVowel(self):
+        self.nNodesPerHiddenLayer = 32
         self.nHiddenLayers = 1
         self.LEARNING_RATE = .15
         self.MOMENTUM = 0
@@ -142,7 +141,28 @@ class NeuralNetLearner(SupervisedLearner):
         target = label if self.isContinuous else self.oneHot(label[0])
         self.backProp(target)
         self.activationList.clear() # this is needed between instances b/c we append to it throughout the algorithm
-        
+
+    # Wrapper around train so that we can do some analysis
+    def train(self, features, labels, validationFeatures, validationLabels, testFeatures, testLabels):
+        nLayersList = []
+        prev_bssf = 9999
+        noImprovementCount = 0
+        self.initHyperParamsVowel()
+        for _ in range(9):
+            print('# layers:', self.nHiddenLayers)
+            self.realTrain(features, labels, validationFeatures, validationLabels, testFeatures, testLabels)
+            nLayersList.append(self.nHiddenLayers)
+            if(self.bssfValMSE[-1] >= prev_bssf):
+                noImprovementCount += 1
+            else:
+                noImprovementCount = 0
+                prev_bssf = self.bssfValMSE[-1]
+            if(noImprovementCount == 3):
+                print('Accuracy has stalled for 3 hidden layers, ending training on layer {0}'.format(self.nHiddenLayers))
+                break
+            self.nHiddenLayers += 1
+        self.plotVowelHiddenLayers(self.bssfTrainMSE, self.bssfValMSE, self.bssfTestMSE, nLayersList)
+
     def realTrain(self, features, labels, validationFeatures, validationLabels, testFeatures, testLabels):
         """
         :type features: Matrix
@@ -152,8 +172,6 @@ class NeuralNetLearner(SupervisedLearner):
         nFeatures = features.cols
         self.isContinuous = labels.value_count(0) == 0
         self.nOutputNodes = labels.value_count(0) if not self.isContinuous else 1
-        if(self.nNodesPerHiddenLayer == 1):
-            self.initHyperParamsVowel(nFeatures)
         self.initWeightMatrices(nFeatures)
 
         bssfTrainMSE = 99999
@@ -184,27 +202,6 @@ class NeuralNetLearner(SupervisedLearner):
         self.bssfTrainMSE.append(bssfTrainMSE)
         self.bssfValMSE.append(bssfValMSE)
         self.bssfTestMSE.append(bssfTestMSE)
-
-    # Wrapper around train so that we can do some analysis
-    def train(self, features, labels, validationFeatures, validationLabels, testFeatures, testLabels):
-        nNodesList = []
-        prev_bssf = 9999
-        noImprovementCount = 0
-        self.nNodesPerHiddenLayer = 1
-        for _ in range(9):
-            print('# nodes:', self.nNodesPerHiddenLayer)
-            self.realTrain(features, labels, validationFeatures, validationLabels, testFeatures, testLabels)
-            nNodesList.append(self.nNodesPerHiddenLayer)
-            if(self.bssfValMSE[-1] >= prev_bssf):
-                noImprovementCount += 1
-            else:
-                noImprovementCount = 0
-                prev_bssf = self.bssfValMSE[-1]
-            if(noImprovementCount == 3):
-                print('Accuracy has stalled for 3 doubling of nodes, ending training on node {0}'.format(self.nNodesPerHiddenLayer))
-                break
-            self.nNodesPerHiddenLayer *= 2
-        self.plotVowelHiddenNodes(self.bssfTrainMSE, self.bssfValMSE, self.bssfTestMSE, nNodesList)
 
     def plotIrisMSE(self, trainMSE, valMSE, valAccuracy):
         plt.plot(range(len(trainMSE)), trainMSE, label='Train MSE') # labels make a legend when you call plt.legend(...)
@@ -245,6 +242,17 @@ class NeuralNetLearner(SupervisedLearner):
         plt.xlabel('Number Hidden Nodes per Layer')
         plt.ylabel('MSE')
         plt.xticks(nNodesList)
+        plt.show()
+
+    def plotVowelHiddenLayers(self, bssfTrainMSE, bssfValMSE, bssfTestMSE, nLayersList):
+        plt.plot(nLayersList, bssfTrainMSE, label='Train MSE')
+        plt.plot(nLayersList, bssfValMSE, label='Val MSE')
+        plt.plot(nLayersList, bssfTestMSE, label='Test MSE')
+        plt.title('VOWEL: Final MSE v. Hidden Layers, LR={0} Stop={1} Epochs'.format(self.LEARNING_RATE, self.STALL_NUM_EPOCHS))
+        plt.legend(loc='upper right')
+        plt.xlabel('Number Hidden Layers')
+        plt.ylabel('MSE')
+        plt.xticks(nLayersList)
         plt.show()
 
     # If continuous, you just return whatever the output node was.
