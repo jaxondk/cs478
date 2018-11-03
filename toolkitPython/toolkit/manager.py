@@ -5,6 +5,7 @@ from .baseline_learner import BaselineLearner
 from .perceptron_learner import PerceptronLearner
 from .multi_perceptron_learner import MultiPerceptronLearner
 from .neural_net_learner import NeuralNetLearner
+from .decision_tree_learner import DecisionTreeLearner
 from .matrix import Matrix
 import random
 import argparse
@@ -29,7 +30,7 @@ class MLSystemManager:
             "perceptron": PerceptronLearner(),
             "multiperceptron": MultiPerceptronLearner(),
             "neuralnet": NeuralNetLearner(),
-            #"decisiontree": DecisionTreeLearner(),
+            "decisiontree": DecisionTreeLearner(), 
             #"knn": InstanceBasedLearner()
         }
         if model in modelmap:
