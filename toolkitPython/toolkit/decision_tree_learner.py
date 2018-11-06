@@ -15,20 +15,34 @@ class Node():
   availableAttributes = [] # Array of column indices. These features have not been split on yet
   out = None 
 
+  def print(self):
+    print('----- Node: {0} -----'.format(self.name))
+    print('Applicable patterns: {0}'.format(len(self.instances.data)))
+    self.instances.printData(self.labels)
+    # self.labels.printData()
+    # print('Available attributes: {0}'.format(self.availableAttributes))
+
   def __init__(self, name, instances, labels, parent, availableAttributes):
     self.name = name
     self.instances = instances
     self.labels = labels
     self.parent = parent
     self.availableAttributes = availableAttributes
+    self.children = []
 
   def split(self, attrForSplit):
-    availableAttributes = self.availableAttributes - [attrForSplit]
-    for av in self.instances.value_count(attrForSplit):
-      name = '{0}={1}'.format(self.instances.attr_name(
-          attrForSplit), self.instances.attr_value(attr, av))
-      # instances = 
-      # child = Node(name, ..., ..., self, availableAttributes)
+    availableAttributes = [a for a in self.availableAttributes if a != attrForSplit]
+    for av in range(self.instances.value_count(attrForSplit)):
+      name = '{0}={1}'.format(self.instances.attr_name(attrForSplit), self.instances.attr_value(attrForSplit, av))
+      row_indices = [r for r in range(self.instances.rows) if self.instances.get(r, attrForSplit) == av]
+      instances = self.instances.getSubset(row_indices)
+      labels = self.labels.getSubset(row_indices)
+      child = Node(name, instances, labels, self, availableAttributes)
+      # child.print()
+      self.addChild(child)
+    print('children after split:')
+    for c in self.children:
+      print(c.name)
 
   def addChild(self, child):
     self.children.append(child)
@@ -36,15 +50,11 @@ class Node():
   ### Check for leaf node. If all the labels are equal for the current set, then this is a leaf node
   def isPureLeafNode(self):
     firstLabel = self.labels.get(0,0)
-    if(all(label == firstLabel for label in self.labels.col(0))):
-      print(self.name + ' is a leaf node')
-      return True
-    else:
-      return False
+    return all(label == firstLabel for label in self.labels.col(0))
 
   # TODO
   def noMoreAttributes(self):
-    return self.instances.cols == 0
+    return len(self.availableAttributes) == 0
 
   # Calc entropy for entire set at current node
   def calcEntropySet(self, labels):
@@ -57,18 +67,18 @@ class Node():
 
   def calcInfoS_a(self, a, vc, attr_counts, label_counts): 
     denominator = attr_counts[a, :vc]
-    print('denom:', denominator)
-    print('denom shape', denominator.shape)
+    # print('denom:', denominator)
+    # print('denom shape', denominator.shape)
     numerators = []
     for av in range(vc):
       numerators.append(label_counts[:, a][:vc, av])
     numerators = np.array(numerators)
-    print('numers:', numerators)
-    print('numers shape', numerators.shape)
+    # print('numers:', numerators)
+    # print('numers shape', numerators.shape)
     p = numerators / denominator[:, None] #this allows you to correctly broadcast denom, even though it is (valCount x null) in shape
     unsummed = np.where(p > 0, p * np.log2(p), 0) #Note: where still runs the np.log part even if p>0, just doesn't return it. So still get warning
     ret = -(unsummed).sum(axis=1)
-    print('ret', ret)
+    # print('ret', ret)
     return ret
 
   def calcEntropyAttributes(self):
@@ -93,22 +103,28 @@ class Node():
       fraction = (attr_counts[a, :vc] / self.instances.rows)
       entropy_attrs[a] = np.sum(fraction * self.calcInfoS_a(a, vc, attr_counts, label_counts))
     return entropy_attrs
-    
 
   # Recursive algorithm.
   def id3(self):
-    if (self.isPureLeafNode() or self.noMoreAttributes()):
+    self.print()
+    input('pause')
+    if (self.isPureLeafNode()):
+      self.out = self.labels.get(0, 0)
+      print('{0} is a leaf node. Out={1}'.format(self.name, self.out))
+      return
+    elif (self.noMoreAttributes()):
+      self.out = max(self.labels.col(0), key=self.labels.col(0).count) # returns mode of array
+      print('{0} has no more attributes to split on. Out={1}'.format(self.name, self.out))
       return
     entropy_attrs = self.calcEntropyAttributes()
     print('entropy of attrs\n', entropy_attrs)
-    ### Choose attribute A with lowest entropy (or highest gain). Split on A’s possible values
     attrForSplit = np.argmin(entropy_attrs)
     print('Split on {0}'.format(self.instances.attr_name(attrForSplit)))
-    input('pause')
-    # TODO - do split. Add all nodes from split to this node's children.
-    # NOTE: when splitting, must use the init_from f(x) of matrix and then set matrix.data manually.
-    # This will keep all the metadata about attributes from the arff file
+    self.split(attrForSplit)
     ### Make current node = next node from A’s possible values. Do this in loop so that when one node is done doing id3, continues with sibling
+    for child in self.children:
+      child.id3()
+    print('Done with node {0}'.format(self.name))
 
 class DecisionTreeLearner(SupervisedLearner):
     root = None

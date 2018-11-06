@@ -76,20 +76,11 @@ class Matrix:
     """
     Returns a matrix that is a subset of the given matrix. Used for non-contiguous subsets. Only removes rows, not columns.
     Keeps original metadata (like the stuff provided in arff file before DATA)
-    @param row_starts - Array of starting positions for rows. len(row_starts) = len(row_counts)
-    @param row_counts - How many rows to include from the row_start
-    @param buddy - a matrix with same row dimensions that you want to take the same row subset of (IE buddy=labels)
+    @param row_indices - Array of row indices to keep
     """
-    def getSubset(self, rows):
+    def getSubset(self, row_indices):
         sub = Matrix(self, 0, 0, 0, self.cols)
-        sub.data = [self.data[row][0:self.cols]for row in rows]
-        # buddy_sub = self.init_from(buddy, row_starts[0], 0, row_counts[0], buddy.cols)
-        # print('Sub before loop:\n')
-        # sub.print()
-        # for i in range(1, len(row_starts)):
-        #     print('For loop i={0}'.format(i))
-        #     sub.add(self, row_starts[i], 0, self.cols)
-        #     # buddy_sub.add(buddy, row_starts[i], 0, buddy.cols)
+        sub.data = [self.data[r][0:self.cols] for r in row_indices]
         return sub
 
     def set_size(self, rows, cols):
@@ -297,6 +288,28 @@ class Matrix:
                     values.append(str(r[j]))
                 else:
                     values.append(self.enum_to_str[j][r[j]])
+
+            # values = list(map(lambda j: str(r[j]) if self.value_count(j) == 0 else self.enum_to_str[j][r[j]],
+            #                   range(len(r))))
+            print("{}".format(", ".join(values)))
+
+    def printData(self, labels=None):
+        for i in range(self.rows):
+            r = self.row(i)
+            
+
+            values = []
+            for j in range(len(r)):
+                if self.value_count(j) == 0:
+                    values.append(str(r[j]))
+                else:
+                    values.append(self.enum_to_str[j][r[j]])
+            if (labels):
+                r_label = labels.row(i)
+                if(labels.value_count(0) == 0):
+                    values.append(str(r_label[0]))
+                else:
+                    values.append(labels.enum_to_str[0][r_label[0]])
 
             # values = list(map(lambda j: str(r[j]) if self.value_count(j) == 0 else self.enum_to_str[j][r[j]],
             #                   range(len(r))))
