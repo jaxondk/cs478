@@ -12,15 +12,23 @@ class Node():
   labels = None # Matrix. Labels of this node's instance set
   parent = None # Node
   children = [] # Node []
-  # availableAttributes = [] # Array of column indices. These features are not already determined
+  availableAttributes = [] # Array of column indices. These features have not been split on yet
   out = None 
 
-  def __init__(self, name, instances, labels, parent):
+  def __init__(self, name, instances, labels, parent, availableAttributes):
     self.name = name
     self.instances = instances
     self.labels = labels
     self.parent = parent
-    # self.availableAttributes = availableAttributes
+    self.availableAttributes = availableAttributes
+
+  def split(self, attrForSplit):
+    availableAttributes = self.availableAttributes - [attrForSplit]
+    for av in self.instances.value_count(attrForSplit):
+      name = '{0}={1}'.format(self.instances.attr_name(
+          attrForSplit), self.instances.attr_value(attr, av))
+      # instances = 
+      # child = Node(name, ..., ..., self, availableAttributes)
 
   def addChild(self, child):
     self.children.append(child)
@@ -113,8 +121,8 @@ class DecisionTreeLearner(SupervisedLearner):
         :type instances: Matrix
         :type labels: Matrix
         """
-        # availableAttributes = range(0, len(instances.row(0)))
-        self.root = Node('root', instances, labels, None)
+        availableAttributes = range(len(instances.row(0)))
+        self.root = Node('root', instances, labels, None, availableAttributes)
         self.root.id3()
 
     def predict(self, instances, labels):
