@@ -23,8 +23,7 @@ class Node():
     print('----- Node: {0} -----'.format(self.name))
     print('Applicable patterns: {0}'.format(len(self.instances.data)))
     self.instances.printData(self.labels)
-    # self.labels.printData()
-    # print('Available attributes: {0}'.format(self.availableAttributes))
+    self.labels.printData()
 
   def __init__(self, name, avFromSplit, instances, labels, parent, availableAttributes):
     self.name = name
@@ -58,26 +57,14 @@ class Node():
   def noMoreAttributes(self):
     return len(self.availableAttributes) == 0
 
-  # Calc entropy for entire set at current node
-  # def calcEntropySet(self, labels):
-  #   classes = list(set(labels))
-  #   entropy = 0
-  #   for i in classes:
-  #     p = labels.count(i)/len(labels)
-  #     entropy -= p * np.log2(p)
-  #   return entropy
-
   def calcInfoS_a(self, a, vc, attr_counts, label_counts): 
     denominator = attr_counts[a, :vc]
-    # print('denom:', denominator)
     numerators = []
     for av in range(vc):
       numerators.append(label_counts[:, a][:vc, av])
     numerators = np.array(numerators)
-    # print('numers:', numerators)
     p = numerators / denominator[:, None] #this allows you to correctly broadcast denom, even though it is (valCount x null) in shape
     unsummed = np.where(p > 0, p * np.log2(p), 0) #Note: where still runs the np.log part even if p>0, just doesn't return it. So still get warning
-    # print('unsummed', unsummed)
     return -(unsummed).sum(axis=1)
 
   def calcEntropyAttributes(self):
@@ -101,45 +88,35 @@ class Node():
       vc = self.instances.value_count(a) # all the vc indexing stuff is to take care of garbage columns that were added to avoid jagged arrays
       fraction = (attr_counts[a, :vc] / self.instances.rows)
       infoS_a = self.calcInfoS_a(a, vc, attr_counts, label_counts)
-      # print('fraction', fraction)
-      # print('infoS_a', infoS_a)
-      # input('pause')
       entropy_attrs[a] = np.sum(fraction * infoS_a)
     return entropy_attrs
 
   # Recursive algorithm.
   def id3(self):
     # self.print()
-    # input('pause'))
     if(self.instances.rows == 0):
       self.out = max(self.parent.labels.col(0), key=self.labels.col(0).count) # returns mode of array
-      print('No instances for {0}. Out={1}'.format(self.name, self.out))
+      # print('No instances for {0}. Out={1}'.format(self.name, self.out))
       return
     elif (self.isPureLeafNode()):
       self.out = self.labels.get(0, 0)
-      print('{0} is a leaf node. Out={1}'.format(self.name, self.out))
+      # print('{0} is a leaf node. Out={1}'.format(self.name, self.out))
       return
     elif (self.noMoreAttributes()):
       self.out = max(self.labels.col(0), key=self.labels.col(0).count) # returns mode of array
-      print('{0} has no more attributes to split on. Out={1}'.format(self.name, self.out))
+      # print('{0} has no more attributes to split on. Out={1}'.format(self.name, self.out))
       return
     entropy_attrs = self.calcEntropyAttributes()
-    # print('entropy of attrs\n', entropy_attrs)
-    # input('pause')
     attrForSplit = np.argmin(entropy_attrs)
-    # print('Split on {0}'.format(self.instances.attr_name(attrForSplit)))
     self.split(attrForSplit)
     ### Make current node = next node from A’s possible values. Do this in loop so that when one node is done doing id3, continues with sibling
     for child in self.children.values():
       child.id3()
-    # print('Done with node {0}'.format(self.name))
 
   # Recursive Function
   def predict(self, instance):
-    # print('Child for prediction: {0}'.format(self.name))
     # if no children, return self.out as prediction
     if(len(self.children) == 0):
-      # print('{0} has no children, returning {1} for prediction'.format(self.name, self.out))
       return self.out
     # grab the attribute value for attrForSplit from instance
     av = instance[self.attrForSplit]
@@ -168,7 +145,6 @@ class DecisionTreeLearner(SupervisedLearner):
         """
         del labels[:]
         label = self.root.predict(instance)
-        # print('Label: ', label)
         labels += [label]
 
         
