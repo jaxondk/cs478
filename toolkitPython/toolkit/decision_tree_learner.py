@@ -47,35 +47,44 @@ class Node():
       entropy -= p * np.log2(p)
     return entropy
 
+  def calcInfoS_a(self, a, attr_counts, label_counts):
+    denominator = attr_counts[a]
+    numerators = []
+    for av in range(self.instances.value_count(a)):
+      numerators.append(label_counts[:, a][:, av])
+    numerators = np.array(numerators)
+    p = numerators / denominator[:, None] #this allows you to correctly broadcast denom, even though it is (valCount x null) in shape
+    return -(p * np.log2(p)).sum(axis=1)
 
   def calcEntropyAttributes(self):
     entropy = 0
     attrs = range(self.instances.cols)
     entropy_attrs = np.zeros(len(attrs))
+    maxAttr = self.instances.maxValueCount()
     # This will be jagged array of nAttr x (Val count of attr). This is Si in the formula
-    instance_counts = np.empty(len(attrs), object)
-    # This is an array of jagged arrays (of same shape as instance_counts). This is numerator of pi of Info(Si)
-    # There is an array of jagged arrays for every possible label
-    label_counts = np.empty((self.labels.value_count(0), len(attrs)), object)
-    # print('instance_counts matrix: ', instance_counts)
-    # print('label_counts matrix: ', label_counts)
+    attr_counts = np.zeros((len(attrs), maxAttr))
+    # This is an array of jagged arrays (of same shape as attr_counts). This is numerator of pi of Info(Si). There is an array of jagged arrays for every possible label
+    label_counts = np.zeros((self.labels.value_count(0), len(attrs), maxAttr))
+    
     ### Run through instances and count how many of each attribute value there is
     for i in range(self.instances.rows):
       for a in attrs:
-        if (type(instance_counts[a]) == type(None)):
-          instance_counts[a] = np.zeros(self.instances.value_count(a))
+        # if (type(attr_counts[a]) == type(None)):
+        #   attr_counts[a] = np.zeros(self.instances.value_count(a), np.ndarray)
         attr_val_i = int(self.instances.get(i, a))
-        instance_counts[a][attr_val_i] += 1
+        attr_counts[a][attr_val_i] += 1
         l = int(self.labels.get(i,0))
-        if (type(label_counts[l][a]) == type(None)):
-          label_counts[l][a] = np.zeros(self.instances.value_count(a))
+        # if (type(label_counts[l][a]) == type(None)):
+        #   label_counts[l][a] = np.zeros(self.instances.value_count(a), np.ndarray)
         label_counts[l][a][attr_val_i] += 1
-    print('instance_counts matrix: ', instance_counts)
-    print('label_counts matrix: ', label_counts)
+    print('attr_counts matrix: \n', attr_counts)
+    print('label_counts matrix: \n', label_counts)
+    for a in attrs:
+      print('fraction:', (attr_counts[a] / self.instances.rows))
+      entropy_attrs[a] = np.sum((attr_counts[a] / self.instances.rows) * self.calcInfoS_a(a, attr_counts, label_counts))
+    print('entropy of attrs\n', entropy_attrs)
     input('pause')
-    # entropy_attrs = (instance_counts / self.instances.rows) * 
-
-
+    return entropy_attrs
     
 
   # Recursive algorithm.

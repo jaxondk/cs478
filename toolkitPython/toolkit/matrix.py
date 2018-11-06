@@ -210,6 +210,13 @@ class Matrix:
         """
         return len(self.enum_to_str[col]) if len(self.enum_to_str) > 0 else 0
 
+    def maxValueCount(self):
+        max = 0
+        for c in range(self.cols):
+            vc = self.value_count(c)
+            max = vc if vc > max else max
+        return max
+
     def shuffle(self, buddy=None):
         """Shuffle the row order. If a buddy Matrix is provided, it will be shuffled in the same order."""
         if not buddy:
