@@ -49,10 +49,14 @@ class Node():
 
   def calcInfoS_a(self, a, attr_counts, label_counts):
     denominator = attr_counts[a]
+    print('denom:', denominator)
+    print('denom shape', denominator.shape)
     numerators = []
     for av in range(self.instances.value_count(a)):
       numerators.append(label_counts[:, a][:, av])
     numerators = np.array(numerators)
+    print('numers:', numerators)
+    print('numers shape', numerators.shape)
     p = numerators / denominator[:, None] #this allows you to correctly broadcast denom, even though it is (valCount x null) in shape
     return -(p * np.log2(p)).sum(axis=1)
 
