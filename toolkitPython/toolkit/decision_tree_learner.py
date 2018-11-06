@@ -47,18 +47,21 @@ class Node():
       entropy -= p * np.log2(p)
     return entropy
 
-  def calcInfoS_a(self, a, attr_counts, label_counts):
-    denominator = attr_counts[a]
+  def calcInfoS_a(self, a, vc, attr_counts, label_counts): 
+    denominator = attr_counts[a, :vc]
     print('denom:', denominator)
     print('denom shape', denominator.shape)
     numerators = []
-    for av in range(self.instances.value_count(a)):
-      numerators.append(label_counts[:, a][:, av])
+    for av in range(vc):
+      numerators.append(label_counts[:, a][:vc, av])
     numerators = np.array(numerators)
     print('numers:', numerators)
     print('numers shape', numerators.shape)
     p = numerators / denominator[:, None] #this allows you to correctly broadcast denom, even though it is (valCount x null) in shape
-    return -(p * np.log2(p)).sum(axis=1)
+    unsummed = np.where(p > 0, p * np.log2(p), 0) #Note: where still runs the np.log part even if p>0, just doesn't return it. So still get warning
+    ret = -(unsummed).sum(axis=1)
+    print('ret', ret)
+    return ret
 
   def calcEntropyAttributes(self):
     entropy = 0
@@ -73,21 +76,15 @@ class Node():
     ### Run through instances and count how many of each attribute value there is
     for i in range(self.instances.rows):
       for a in attrs:
-        # if (type(attr_counts[a]) == type(None)):
-        #   attr_counts[a] = np.zeros(self.instances.value_count(a), np.ndarray)
         attr_val_i = int(self.instances.get(i, a))
         attr_counts[a][attr_val_i] += 1
         l = int(self.labels.get(i,0))
-        # if (type(label_counts[l][a]) == type(None)):
-        #   label_counts[l][a] = np.zeros(self.instances.value_count(a), np.ndarray)
         label_counts[l][a][attr_val_i] += 1
-    print('attr_counts matrix: \n', attr_counts)
-    print('label_counts matrix: \n', label_counts)
     for a in attrs:
-      print('fraction:', (attr_counts[a] / self.instances.rows))
-      entropy_attrs[a] = np.sum((attr_counts[a] / self.instances.rows) * self.calcInfoS_a(a, attr_counts, label_counts))
+      vc = self.instances.value_count(a) # all the vc indexing stuff is to take care of garbage columns that were added to avoid jagged arrays
+      fraction = (attr_counts[a, :vc] / self.instances.rows)
+      entropy_attrs[a] = np.sum(fraction * self.calcInfoS_a(a, vc, attr_counts, label_counts))
     print('entropy of attrs\n', entropy_attrs)
-    input('pause')
     return entropy_attrs
     
 
@@ -97,7 +94,7 @@ class Node():
       return
     ### For each attribute available at current node, calc info of attribute
     info_attrs = self.calcEntropyAttributes()
-
+    input('pause')
     ### Choose attribute A with highest info gain. Split on A’s possible values
     ### Make current node = next node from A’s possible values
     # NOTE: when splitting, must use the init_from f(x) of matrix and then set matrix.data manually. 
