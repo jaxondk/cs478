@@ -84,7 +84,6 @@ class Node():
       vc = self.instances.value_count(a) # all the vc indexing stuff is to take care of garbage columns that were added to avoid jagged arrays
       fraction = (attr_counts[a, :vc] / self.instances.rows)
       entropy_attrs[a] = np.sum(fraction * self.calcInfoS_a(a, vc, attr_counts, label_counts))
-    print('entropy of attrs\n', entropy_attrs)
     return entropy_attrs
     
 
@@ -92,13 +91,16 @@ class Node():
   def id3(self):
     if (self.isPureLeafNode() or self.noMoreAttributes()):
       return
-    ### For each attribute available at current node, calc info of attribute
-    info_attrs = self.calcEntropyAttributes()
+    entropy_attrs = self.calcEntropyAttributes()
+    print('entropy of attrs\n', entropy_attrs)
+    ### Choose attribute A with lowest entropy (or highest gain). Split on A’s possible values
+    attrForSplit = np.argmin(entropy_attrs)
+    print('Split on {0}'.format(self.instances.attr_name(attrForSplit)))
     input('pause')
-    ### Choose attribute A with highest info gain. Split on A’s possible values
-    ### Make current node = next node from A’s possible values
-    # NOTE: when splitting, must use the init_from f(x) of matrix and then set matrix.data manually. 
+    # TODO - do split. Add all nodes from split to this node's children.
+    # NOTE: when splitting, must use the init_from f(x) of matrix and then set matrix.data manually.
     # This will keep all the metadata about attributes from the arff file
+    ### Make current node = next node from A’s possible values
 
 class DecisionTreeLearner(SupervisedLearner):
     root = None
