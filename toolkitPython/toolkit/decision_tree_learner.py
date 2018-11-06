@@ -8,11 +8,13 @@ import matplotlib.pyplot as plt
 
 class Node():
   name = None # string
+  attrForSplit = None # index
+  avFromSplit = None # attribute value for split
   instances = None # Matrix. Features of this node's instance set
   labels = None # Matrix. Labels of this node's instance set
   parent = None # Node
-  children = [] # Node []
-  availableAttributes = [] # Array of column indices. These features have not been split on yet
+  children = None # Node dict. key=attribute value for the split, value=Node
+  availableAttributes = None # Array of column indices. These features have not been split on yet
   out = None 
 
   def print(self):
@@ -22,30 +24,28 @@ class Node():
     # self.labels.printData()
     # print('Available attributes: {0}'.format(self.availableAttributes))
 
-  def __init__(self, name, instances, labels, parent, availableAttributes):
+  def __init__(self, name, avFromSplit, instances, labels, parent, availableAttributes):
     self.name = name
+    self.avFromSplit = avFromSplit
     self.instances = instances
     self.labels = labels
     self.parent = parent
     self.availableAttributes = availableAttributes
-    self.children = []
+    self.children = {}
 
   def split(self, attrForSplit):
+    self.attrForSplit = attrForSplit
     availableAttributes = [a for a in self.availableAttributes if a != attrForSplit]
     for av in range(self.instances.value_count(attrForSplit)):
       name = '{0}={1}'.format(self.instances.attr_name(attrForSplit), self.instances.attr_value(attrForSplit, av))
       row_indices = [r for r in range(self.instances.rows) if self.instances.get(r, attrForSplit) == av]
       instances = self.instances.getSubset(row_indices)
       labels = self.labels.getSubset(row_indices)
-      child = Node(name, instances, labels, self, availableAttributes)
-      # child.print()
+      child = Node(name, av, instances, labels, self, availableAttributes)
       self.addChild(child)
-    print('children after split:')
-    for c in self.children:
-      print(c.name)
 
   def addChild(self, child):
-    self.children.append(child)
+    self.children[child.avFromSplit] = child
 
   ### Check for leaf node. If all the labels are equal for the current set, then this is a leaf node
   def isPureLeafNode(self):
@@ -107,7 +107,7 @@ class Node():
   # Recursive algorithm.
   def id3(self):
     self.print()
-    input('pause')
+    # input('pause')
     if (self.isPureLeafNode()):
       self.out = self.labels.get(0, 0)
       print('{0} is a leaf node. Out={1}'.format(self.name, self.out))
@@ -122,9 +122,21 @@ class Node():
     print('Split on {0}'.format(self.instances.attr_name(attrForSplit)))
     self.split(attrForSplit)
     ### Make current node = next node from A’s possible values. Do this in loop so that when one node is done doing id3, continues with sibling
-    for child in self.children:
+    for child in self.children.values():
       child.id3()
     print('Done with node {0}'.format(self.name))
+
+  # Recursive Function
+  def predict(self, instance):
+    print('Child for prediction: {0}'.format(self.name))
+    # if no children, return self.out as prediction
+    if(len(self.children) == 0):
+      print('{0} has no children, returning {1} for prediction'.format(self.name, self.out))
+      return self.out
+    # grab the attribute value for attrForSplit from instance
+    av = instance[self.attrForSplit]
+    # go to the child who has the same avForSplit and call its predict
+    return self.children[av].predict(instance)
 
 class DecisionTreeLearner(SupervisedLearner):
     root = None
@@ -138,12 +150,17 @@ class DecisionTreeLearner(SupervisedLearner):
         :type labels: Matrix
         """
         availableAttributes = range(len(instances.row(0)))
-        self.root = Node('root', instances, labels, None, availableAttributes)
+        self.root = Node('root', None, instances, labels, None, availableAttributes)
         self.root.id3()
 
-    def predict(self, instances, labels):
+    def predict(self, instance, labels):
         """
-        :type instances: [float]
+        :type instance: [float]
         :type labels: [float]
         """
+        del labels[:]
+        label = self.root.predict(instance)
+        print('Label: ', label)
+        labels += [label]
+
         
