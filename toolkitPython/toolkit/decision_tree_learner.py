@@ -100,7 +100,7 @@ class Node():
     # TODO - do split. Add all nodes from split to this node's children.
     # NOTE: when splitting, must use the init_from f(x) of matrix and then set matrix.data manually.
     # This will keep all the metadata about attributes from the arff file
-    ### Make current node = next node from A’s possible values
+    ### Make current node = next node from A’s possible values. Do this in loop so that when one node is done doing id3, continues with sibling
 
 class DecisionTreeLearner(SupervisedLearner):
     root = None
