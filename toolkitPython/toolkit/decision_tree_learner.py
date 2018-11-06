@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 class Node():
   name = None # string
   instances = None # Matrix. Features of this node's instance set
-  labels = [] # Array. Labels of this node's instance set
+  labels = None # Matrix. Labels of this node's instance set
   parent = None # Node
   children = [] # Node []
   # availableAttributes = [] # Array of column indices. These features are not already determined
@@ -27,8 +27,8 @@ class Node():
 
   ### Check for leaf node. If all the labels are equal for the current set, then this is a leaf node
   def isPureLeafNode(self):
-    firstLabel = self.labels[0]
-    if(all(label == firstLabel for label in self.labels[1:])):
+    firstLabel = self.labels.get(0,0)
+    if(all(label == firstLabel for label in self.labels.col(0))):
       print(self.name + ' is a leaf node')
       return True
     else:
@@ -52,16 +52,30 @@ class Node():
     entropy = 0
     attrs = range(self.instances.cols)
     entropy_attrs = np.zeros(len(attrs))
-    counts = np.empty(len(attrs), object)
+    # This will be jagged array of nAttr x (Val count of attr). This is Si in the formula
+    instance_counts = np.empty(len(attrs), object)
+    # This is an array of jagged arrays (of same shape as instance_counts). This is numerator of pi of Info(Si)
+    # There is an array of jagged arrays for every possible label
+    label_counts = np.empty((self.labels.value_count(0), len(attrs)), object)
+    # print('instance_counts matrix: ', instance_counts)
+    # print('label_counts matrix: ', label_counts)
     ### Run through instances and count how many of each attribute value there is
     for i in range(self.instances.rows):
       for a in attrs:
-        if (type(counts[a]) == type(None)):
-          counts[a] = np.zeros(self.instances.value_count(a))
-        count_i = int(self.instances.get(i, a))
-        counts[a][count_i] += 1
-    print('Counts matrix: ', counts)
+        if (type(instance_counts[a]) == type(None)):
+          instance_counts[a] = np.zeros(self.instances.value_count(a))
+        attr_val_i = int(self.instances.get(i, a))
+        instance_counts[a][attr_val_i] += 1
+        l = int(self.labels.get(i,0))
+        if (type(label_counts[l][a]) == type(None)):
+          label_counts[l][a] = np.zeros(self.instances.value_count(a))
+        label_counts[l][a][attr_val_i] += 1
+    print('instance_counts matrix: ', instance_counts)
+    print('label_counts matrix: ', label_counts)
     input('pause')
+    # entropy_attrs = (instance_counts / self.instances.rows) * 
+
+
     
 
   # Recursive algorithm.
@@ -69,7 +83,6 @@ class Node():
     if (self.isPureLeafNode() or self.noMoreAttributes()):
       return
     ### For each attribute available at current node, calc info of attribute
-    # info_s = self.calcEntropySet(self.labels)
     info_attrs = self.calcEntropyAttributes()
 
     ### Choose attribute A with highest info gain. Split on A’s possible values
@@ -89,7 +102,7 @@ class DecisionTreeLearner(SupervisedLearner):
         :type labels: Matrix
         """
         # availableAttributes = range(0, len(instances.row(0)))
-        self.root = Node('root', instances, labels.col(0), None)
+        self.root = Node('root', instances, labels, None)
         self.root.id3()
 
     def predict(self, instances, labels):
