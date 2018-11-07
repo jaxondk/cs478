@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 
 class Node():
   ###### NOTE: these are CLASS variables. they are different than self.VARNAME.
-  ######       Commenting them out fixed a recursion error when using cross validation
   # name = None # string
   # attrForSplit = None # index
   # avFromSplit = None # attribute value for split
@@ -23,7 +22,6 @@ class Node():
     print('----- Node: {0} -----'.format(self.name))
     print('Applicable patterns: {0}'.format(len(self.instances.data)))
     self.instances.printData(self.labels)
-    self.labels.printData()
 
   def __init__(self, name, avFromSplit, instances, labels, parent, availableAttributes):
     self.name = name
@@ -95,7 +93,7 @@ class Node():
   def id3(self):
     # self.print()
     if(self.instances.rows == 0):
-      self.out = max(self.parent.labels.col(0), key=self.labels.col(0).count) # returns mode of array
+      self.out = self.parent.labels.most_common_value(0)
       # print('No instances for {0}. Out={1}'.format(self.name, self.out))
       return
     elif (self.isPureLeafNode()):
@@ -103,7 +101,7 @@ class Node():
       # print('{0} is a leaf node. Out={1}'.format(self.name, self.out))
       return
     elif (self.noMoreAttributes()):
-      self.out = max(self.labels.col(0), key=self.labels.col(0).count) # returns mode of array
+      self.out = self.labels.most_common_value(0)
       # print('{0} has no more attributes to split on. Out={1}'.format(self.name, self.out))
       return
     entropy_attrs = self.calcEntropyAttributes()
