@@ -220,9 +220,11 @@ class Matrix:
         """
         return len(self.enum_to_str[col]) if len(self.enum_to_str) > 0 else 0
 
-    def maxValueCount(self):
+    def maxValueCount(self, cols):
+        if(not cols):
+            cols = range(self.cols)
         max = 0
-        for c in range(self.cols):
+        for c in cols:
             vc = self.value_count(c)
             max = vc if vc > max else max
         return max

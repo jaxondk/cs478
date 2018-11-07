@@ -7,19 +7,22 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class Node():
-  ###### NOTE: these are CLASS variables. they are different than self.VARNAME.
-  # name = None # string
-  # attrForSplit = None # index
-  # avFromSplit = None # attribute value for split
-  # instances = None # Matrix. Features of this node's instance set
-  # labels = None # Matrix. Labels of this node's instance set
-  # parent = None # Node
-  # children = None # Node dict. key=attribute value for the split, value=Node
-  # availableAttributes = None # Array of column indices. These features have not been split on yet
-  # out = None 
+  """
+  name: string
+  attrForSplit: int (index)
+  avFromSplit: type(attribute value for split)
+  instances: Matrix. Features of this node's instance set
+  labels: Matrix. Labels of this node's instance set
+  parent: Node
+  children: Node dict. key=attribute value for the split, value=Node
+  availableAttributes: int[]. Array of column indices. These features have not been split on yet
+  out: float. What this node will predict. Only set on leaf nodes
+  """
+  total_nodes_in_tree = 0
 
   def print(self):
     print('----- Node: {0} -----'.format(self.name))
+    print('Available attributes: {0}'.format(self.availableAttributes))
     print('Applicable patterns: {0}'.format(len(self.instances.data)))
     self.instances.printData(self.labels)
 
@@ -35,6 +38,8 @@ class Node():
   def split(self, attrForSplit):
     self.attrForSplit = attrForSplit
     availableAttributes = [a for a in self.availableAttributes if a != attrForSplit]
+    print('attr for split: ', self.attrForSplit)
+    print('available attributes for children:', availableAttributes)
     for av in range(self.instances.value_count(attrForSplit)):
       name = '{0}={1}'.format(self.instances.attr_name(attrForSplit), self.instances.attr_value(attrForSplit, av))
       row_indices = [r for r in range(self.instances.rows) if self.instances.get(r, attrForSplit) == av]
@@ -51,7 +56,6 @@ class Node():
     firstLabel = self.labels.get(0,0)
     return all(label == firstLabel for label in self.labels.col(0))
 
-  # TODO
   def noMoreAttributes(self):
     return len(self.availableAttributes) == 0
 
@@ -61,15 +65,16 @@ class Node():
     for av in range(vc):
       numerators.append(label_counts[:, a][:vc, av])
     numerators = np.array(numerators)
-    p = numerators / denominator[:, None] #this allows you to correctly broadcast denom, even though it is (valCount x null) in shape
-    unsummed = np.where(p > 0, p * np.log2(p), 0) #Note: where still runs the np.log part even if p>0, just doesn't return it. So still get warning
+    p = numerators / denominator[:, None] #this allows you to correctly broadcast denominator despite its shape being (valCount,)
+    unsummed = np.where(p > 0, p * np.log2(p), 0) #Note: 'where' still runs the np.log part even if p>0, just doesn't return it. So still get warning
     return -(unsummed).sum(axis=1)
 
+  # TODO - rewrite calcEntropyAttributes to use self.availableAttributes for attrs
   def calcEntropyAttributes(self):
     entropy = 0
-    attrs = range(self.instances.cols)
+    attrs = range(self.instances.cols) 
     entropy_attrs = np.zeros(len(attrs))
-    maxAttr = self.instances.maxValueCount()
+    maxAttr = self.instances.maxValueCount(attrs)
     # This will be  array of nAttr x (maxValCount of attrs). This is Si in the formula
     attr_counts = np.zeros((len(attrs), maxAttr))
     # This is an array of arrays (of same shape as attr_counts). This is numerator of pi of Info(Si). There is an array of arrays for every possible label
@@ -87,27 +92,32 @@ class Node():
       fraction = (attr_counts[a, :vc] / self.instances.rows)
       infoS_a = self.calcInfoS_a(a, vc, attr_counts, label_counts)
       entropy_attrs[a] = np.sum(fraction * infoS_a)
-    return entropy_attrs
+    entropy_available_attrs = {i: e for i, e in enumerate(entropy_attrs) if i in self.availableAttributes}
+    return entropy_available_attrs
 
   # Recursive algorithm.
   def id3(self):
-    # self.print()
+    # if(Node.total_nodes_in_tree > 35): return
+    Node.total_nodes_in_tree += 1
+    print('---- Node # {0} -----'.format(Node.total_nodes_in_tree))
+    self.print()
     if(self.instances.rows == 0):
       self.out = self.parent.labels.most_common_value(0)
-      # print('No instances for {0}. Out={1}'.format(self.name, self.out))
+      print('No. instances for {0}. Out={1}'.format(self.name, self.out))
       return
     elif (self.isPureLeafNode()):
       self.out = self.labels.get(0, 0)
-      # print('{0} is a leaf node. Out={1}'.format(self.name, self.out))
+      print('{0} is a leaf node. Out={1}'.format(self.name, self.out))
       return
     elif (self.noMoreAttributes()):
       self.out = self.labels.most_common_value(0)
-      # print('{0} has no more attributes to split on. Out={1}'.format(self.name, self.out))
+      print('{0} has no more attributes to split on. Out={1}'.format(self.name, self.out))
       return
-    entropy_attrs = self.calcEntropyAttributes()
-    attrForSplit = np.argmin(entropy_attrs)
+    entropy_available_attrs = self.calcEntropyAttributes()
+    attrForSplit = min(entropy_available_attrs, key=entropy_available_attrs.get)
     self.split(attrForSplit)
     ### Make current node = next node from A’s possible values. Do this in loop so that when one node is done doing id3, continues with sibling
+    print('children of {0}: {1}'.format(self.name, self.children.keys()))
     for child in self.children.values():
       child.id3()
 
@@ -139,8 +149,8 @@ class DecisionTreeLearner(SupervisedLearner):
         :type instances: Matrix
         :type labels: Matrix
         """
+        Node.total_nodes_in_tree = 0
         self.fillMissingValues(instances)
-        instances.print()
         availableAttributes = range(len(instances.row(0)))
         self.root = Node('root', None, instances, labels, None, availableAttributes)
         self.root.id3()
