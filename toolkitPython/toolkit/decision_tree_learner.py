@@ -122,16 +122,25 @@ class Node():
     return self.children[av].predict(instance)
 
 class DecisionTreeLearner(SupervisedLearner):
-    root = None
-
     def __init__(self):
         pass
+
+    def fillMissingValues(self, instances):
+      missing_val = float('Inf')
+      for c in range(instances.cols):
+        attr_mode = instances.most_common_value(c)
+        newCol = [attr_mode if(x == missing_val) else x for x in instances.col(c)]
+        data = np.array(instances.data)
+        data[:,c] = newCol
+        instances.data = data.tolist()
 
     def train(self, instances, labels):
         """
         :type instances: Matrix
         :type labels: Matrix
         """
+        self.fillMissingValues(instances)
+        instances.print()
         availableAttributes = range(len(instances.row(0)))
         self.root = Node('root', None, instances, labels, None, availableAttributes)
         self.root.id3()
