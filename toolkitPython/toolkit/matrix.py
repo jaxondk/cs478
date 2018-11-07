@@ -295,7 +295,7 @@ class Matrix:
             #                   range(len(r))))
             print("{}".format(", ".join(values)))
 
-    def printData(self, labels=None):
+    def printData(self, labels, spacing):
         for i in range(self.rows):
             r = self.row(i)
             
@@ -315,4 +315,4 @@ class Matrix:
 
             # values = list(map(lambda j: str(r[j]) if self.value_count(j) == 0 else self.enum_to_str[j][r[j]],
             #                   range(len(r))))
-            print("{}".format(", ".join(values)))
+            print(spacing+"{}".format(", ".join(values)))

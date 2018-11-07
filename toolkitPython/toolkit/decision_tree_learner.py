@@ -20,11 +20,17 @@ class Node():
   """
   total_nodes_in_tree = 0
 
-  def print(self):
-    print('----- Node: {0} -----'.format(self.name))
-    print('Available attributes: {0}'.format(self.availableAttributes))
-    print('Applicable patterns: {0}'.format(len(self.instances.data)))
-    self.instances.printData(self.labels)
+  def print(self, withPatterns=True, spacing=''):
+    print(spacing+'----- Node: {0} -----'.format(self.name))
+    print(spacing+'Available attributes: {0}'.format(
+        [self.instances.attr_name(a) for a in self.availableAttributes]))
+    if (hasattr(self, 'attrForSplit')):
+      print(spacing+'Attribute this node splits on: {0}'.format(self.instances.attr_name(self.attrForSplit)))
+    else:
+      print(spacing+'Leaf Node. Out={0}'.format(self.labels.attr_value(0, self.out)))
+    if (withPatterns): 
+      print(spacing+'Applicable patterns: {0}'.format(len(self.instances.data)))
+      self.instances.printData(self.labels, spacing)
 
   def __init__(self, name, avFromSplit, instances, labels, parent, availableAttributes):
     self.name = name
@@ -38,8 +44,6 @@ class Node():
   def split(self, attrForSplit):
     self.attrForSplit = attrForSplit
     availableAttributes = [a for a in self.availableAttributes if a != attrForSplit]
-    print('attr for split: ', self.attrForSplit)
-    print('available attributes for children:', availableAttributes)
     for av in range(self.instances.value_count(attrForSplit)):
       name = '{0}={1}'.format(self.instances.attr_name(attrForSplit), self.instances.attr_value(attrForSplit, av))
       row_indices = [r for r in range(self.instances.rows) if self.instances.get(r, attrForSplit) == av]
@@ -97,27 +101,23 @@ class Node():
 
   # Recursive algorithm.
   def id3(self):
-    # if(Node.total_nodes_in_tree > 35): return
     Node.total_nodes_in_tree += 1
-    print('---- Node # {0} -----'.format(Node.total_nodes_in_tree))
-    self.print()
+    # self.print()
     if(self.instances.rows == 0):
       self.out = self.parent.labels.most_common_value(0)
-      print('No. instances for {0}. Out={1}'.format(self.name, self.out))
+      # print('No. instances for {0}. Out={1}'.format(self.name, self.out))
       return
     elif (self.isPureLeafNode()):
       self.out = self.labels.get(0, 0)
-      print('{0} is a leaf node. Out={1}'.format(self.name, self.out))
+      # print('{0} is a leaf node. Out={1}'.format(self.name, self.out))
       return
     elif (self.noMoreAttributes()):
       self.out = self.labels.most_common_value(0)
-      print('{0} has no more attributes to split on. Out={1}'.format(self.name, self.out))
+      # print('{0} has no more attributes to split on. Out={1}'.format(self.name, self.out))
       return
     entropy_available_attrs = self.calcEntropyAttributes()
     attrForSplit = min(entropy_available_attrs, key=entropy_available_attrs.get)
     self.split(attrForSplit)
-    ### Make current node = next node from A’s possible values. Do this in loop so that when one node is done doing id3, continues with sibling
-    print('children of {0}: {1}'.format(self.name, self.children.keys()))
     for child in self.children.values():
       child.id3()
 
@@ -131,18 +131,29 @@ class Node():
     # go to the child who has the same avForSplit and call its predict
     return self.children[av].predict(instance)
 
+  def printTree(self, spacing):
+    self.print(withPatterns=False, spacing=spacing)
+    spacing += '\t'
+    for c in self.children.values():
+      c.printTree(spacing)
+
+
 class DecisionTreeLearner(SupervisedLearner):
+    MISSING_VAL = float('Inf')
+
     def __init__(self):
         pass
 
     def fillMissingValues(self, instances):
-      missing_val = float('Inf')
       for c in range(instances.cols):
-        attr_mode = instances.most_common_value(c)
-        newCol = [attr_mode if(x == missing_val) else x for x in instances.col(c)]
+        self.attr_modes.append(instances.most_common_value(c))
+        newCol = [self.attr_modes[c] if(x == DecisionTreeLearner.MISSING_VAL) else x for x in instances.col(c)]
         data = np.array(instances.data)
         data[:,c] = newCol
         instances.data = data.tolist()
+    
+    def fillMissingValueForPredict(self, instance):
+        return [self.attr_modes[i] if (x == DecisionTreeLearner.MISSING_VAL) else x for i, x in enumerate(instance)]
 
     def train(self, instances, labels):
         """
@@ -150,10 +161,12 @@ class DecisionTreeLearner(SupervisedLearner):
         :type labels: Matrix
         """
         Node.total_nodes_in_tree = 0
+        self.attr_modes = []
         self.fillMissingValues(instances)
         availableAttributes = range(len(instances.row(0)))
         self.root = Node('root', None, instances, labels, None, availableAttributes)
         self.root.id3()
+        self.root.printTree('')
 
     def predict(self, instance, labels):
         """
@@ -161,6 +174,7 @@ class DecisionTreeLearner(SupervisedLearner):
         :type labels: [float]
         """
         del labels[:]
+        instance = self.fillMissingValueForPredict(instance)
         label = self.root.predict(instance)
         labels += [label]
 
