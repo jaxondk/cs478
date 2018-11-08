@@ -19,6 +19,7 @@ class Node():
   out: float. What this node will predict. Only set on leaf nodes
   """
   total_nodes_in_tree = 0
+  total_levels_in_tree = 1
 
   def print(self, withPatterns=True, spacing=''):
     print(spacing+'----- Node: {0} -----'.format(self.name))
@@ -101,7 +102,7 @@ class Node():
 
   # Recursive algorithm.
   def id3(self):
-    Node.total_nodes_in_tree += 1
+    Node.total_nodes_in_tree += 1 
     # self.print()
     if(self.instances.rows == 0):
       self.out = self.parent.labels.most_common_value(0)
@@ -118,6 +119,7 @@ class Node():
     entropy_available_attrs = self.calcEntropyAttributes()
     attrForSplit = min(entropy_available_attrs, key=entropy_available_attrs.get)
     self.split(attrForSplit)
+    Node.total_levels_in_tree += 1
     for child in self.children.values():
       child.id3()
 
@@ -169,12 +171,17 @@ class DecisionTreeLearner(SupervisedLearner):
         # self.root.printTree('')
         if(val_instances != None):
           self.bssf, _ = self.measure_accuracy(val_instances, val_labels)
-          print('Validation accuracy of unpruned tree:', self.bssf)
+          test_acc, _ = self.measure_accuracy(test_instances, test_labels)
+          # print('Validation accuracy of unpruned tree:', self.bssf)
+          print('Test accuracy of unpruned tree:', test_acc)
           print('Number of nodes in unpruned tree', Node.total_nodes_in_tree)
+          print('Number of levels in unpruned tree', Node.total_levels_in_tree)
           Node.total_nodes_in_tree = 0
+          Node.total_levels_in_tree = 1
           self.prune(self.root, val_instances, val_labels)
-          print('Validation accuracy after pruning finished', self.bssf)
+          # print('Validation accuracy after pruning finished', self.bssf)
           print('Number of nodes in pruned tree', Node.total_nodes_in_tree)
+          print('Number of levels in pruned tree', Node.total_levels_in_tree)
 
     # Recursive f(x)
     def prune(self, node, val_instances, val_labels):
@@ -195,6 +202,7 @@ class DecisionTreeLearner(SupervisedLearner):
       else:
         node.children = children
         del node.out
+        Node.total_levels_in_tree += 1
         for c in node.children.values():
          self.prune(c, val_instances, val_labels)
 
