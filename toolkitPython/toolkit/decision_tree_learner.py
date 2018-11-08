@@ -162,11 +162,11 @@ class DecisionTreeLearner(SupervisedLearner):
         """
         Node.total_nodes_in_tree = 0
         self.attr_modes = []
-        self.fillMissingValues(instances)
+        # self.fillMissingValues(instances)
         availableAttributes = range(len(instances.row(0)))
         self.root = Node('root', None, instances, labels, None, availableAttributes)
         self.root.id3()
-        self.root.printTree('')
+        # self.root.printTree('')
 
     def predict(self, instance, labels):
         """
@@ -174,7 +174,7 @@ class DecisionTreeLearner(SupervisedLearner):
         :type labels: [float]
         """
         del labels[:]
-        instance = self.fillMissingValueForPredict(instance)
+        # instance = self.fillMissingValueForPredict(instance)
         label = self.root.predict(instance)
         labels += [label]
 
