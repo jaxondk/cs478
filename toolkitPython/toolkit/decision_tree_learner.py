@@ -155,7 +155,7 @@ class DecisionTreeLearner(SupervisedLearner):
     def fillMissingValueForPredict(self, instance):
         return [self.attr_modes[i] if (x == DecisionTreeLearner.MISSING_VAL) else x for i, x in enumerate(instance)]
 
-    def train(self, instances, labels):
+    def train(self, instances, labels, val_instances=None, val_labels=None, test_instances=None, test_labels=None):
         """
         :type instances: Matrix
         :type labels: Matrix
@@ -166,7 +166,37 @@ class DecisionTreeLearner(SupervisedLearner):
         availableAttributes = range(len(instances.row(0)))
         self.root = Node('root', None, instances, labels, None, availableAttributes)
         self.root.id3()
-        self.root.printTree('')
+        # self.root.printTree('')
+        if(val_instances != None):
+          self.bssf, _ = self.measure_accuracy(val_instances, val_labels)
+          print('Validation accuracy of unpruned tree:', self.bssf)
+          print('Number of nodes in unpruned tree', Node.total_nodes_in_tree)
+          Node.total_nodes_in_tree = 0
+          self.prune(self.root, val_instances, val_labels)
+          print('Validation accuracy after pruning finished', self.bssf)
+          print('Number of nodes in pruned tree', Node.total_nodes_in_tree)
+
+    # Recursive f(x)
+    def prune(self, node, val_instances, val_labels):
+      Node.total_nodes_in_tree += 1
+      # if during training this node was assigned an out, then it's a leaf node.
+      if(hasattr(node, 'out')):
+        return
+      # Otherwise, temporarily prune subtree and check if no loss in accuracy
+      children = node.children
+      node.children = [] #prune children
+      node.out = node.labels.most_common_value(0)
+      val_acc, _ = self.measure_accuracy(val_instances, val_labels)
+      # If no loss, pruning should be permanent
+      if (val_acc >= self.bssf):
+        self.bssf = val_acc 
+        return
+      # Otherwise, undo the prune and recurse on children
+      else:
+        node.children = children
+        del node.out
+        for c in node.children.values():
+         self.prune(c, val_instances, val_labels)
 
     def predict(self, instance, labels):
         """
