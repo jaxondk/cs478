@@ -75,7 +75,6 @@ class SupervisedLearner:
                 if targ >= label_values_count:
                     raise Exception("The label is out of range")
                 self.predict(feat, prediction)
-                print(prediction)
                 pred = int(prediction[0])
                 error.append((targ - pred)**2)
                 if confusion:

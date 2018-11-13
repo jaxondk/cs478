@@ -50,6 +50,15 @@ class KNNLearner(SupervisedLearner):
     def calcWeights(self, distances, min_indices):
         return (1/distances[min_indices])**2
 
+    def calcWeightedVotes(self, distances, min_indices, labelsOfKNN):
+        weightsKNN = self.calcWeights(distances, min_indices)
+        candidateClasses = np.unique(labelsOfKNN)
+        weightedVotes = np.zeros(len(candidateClasses))
+        for c in candidateClasses:
+            indices = [i for i, l in enumerate(labelsOfKNN) if l == c]
+            weightedVotes[int(c)] = np.sum(weightsKNN[indices])
+        return weightedVotes
+
     def predict(self, featureRow, out):
         """
         :type featureRow: [float]
@@ -69,20 +78,13 @@ class KNNLearner(SupervisedLearner):
         min_indices = np.argpartition(distances, range(k))[:k] 
         labelsOfKNN = self.npLabels[min_indices][:, 0]
 
-        ### k nearest instances vote on output class
+        ### k nearest instances vote on output class. Voting scheme depends on if you do weighted voting and if you want knn regression
         if(weighting):
+            weightedVotes = self.calcWeightedVotes(distances, min_indices, labelsOfKNN)
             if (regression):
                 pass
             else:
-                weightsKNN = self.calcWeights(distances, min_indices)
-                candidateClasses = np.unique(labelsOfKNN)
-                weightedVotes = np.zeros(len(candidateClasses))
-                print(weightsKNN)
-                print(labelsOfKNN)
-                for c in candidateClasses:
-                    indices = [i for i,l in enumerate(labelsOfKNN) if l == c]
-                    print('indices for {0}: '.format(c), indices)
-                    weightedVotes[int(c)] = np.sum(weightsKNN[indices])
+                # The highest weighted vote wins
                 pred = np.argmax(weightedVotes)
                 out.append(pred)
 
@@ -90,6 +92,7 @@ class KNNLearner(SupervisedLearner):
             if (regression):
                 pass
             else:
+                # The most frequent vote wins
                 pred, _ = mode(labelsOfKNN)
                 out.append(pred[0])
                 
