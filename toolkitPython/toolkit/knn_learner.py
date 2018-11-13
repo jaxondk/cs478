@@ -59,6 +59,12 @@ class KNNLearner(SupervisedLearner):
             weightedVotes[int(c)] = np.sum(weightsKNN[indices])
         return weightedVotes
 
+    def predictWeightedRegression(self, distances, min_indices, labelsOfKNN):
+        weights = self.calcWeights(distances, min_indices)
+        numer = np.sum(weights * labelsOfKNN)
+        denom = np.sum(weights)
+        return numer/denom
+
     def predict(self, featureRow, out):
         """
         :type featureRow: [float]
@@ -66,7 +72,7 @@ class KNNLearner(SupervisedLearner):
         """
         ### Initialize k and other hyperparams. Can also wrap here to test multiple k's
         k = 3
-        weighting = False
+        weighting = True
         regression = True
 
         # TODO - remove this, just for testing
@@ -81,14 +87,15 @@ class KNNLearner(SupervisedLearner):
         ### k nearest instances vote on output class. Voting scheme depends on if you do weighted voting and if you want knn regression
         pred = None
         if(weighting):
-            weightedVotes = self.calcWeightedVotes(distances, min_indices, labelsOfKNN)
             if (regression):
-                pass
+                pred = self.predictWeightedRegression(distances, min_indices, labelsOfKNN)
             else:
                 # The highest weighted vote wins
+                weightedVotes = self.calcWeightedVotes(distances, min_indices, labelsOfKNN)
                 pred = np.argmax(weightedVotes)
         else:
             if (regression):
+                # Output the mean of the continuous labels
                 pred = np.mean(labelsOfKNN)
             else:
                 # The most frequent vote wins
