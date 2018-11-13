@@ -37,6 +37,7 @@ class KNNLearner(SupervisedLearner):
         # TODO - do some reduction here to make training set smaller
         self.npFeatures = np.array(features.data)
         self.npLabels = np.array(labels.data)
+        self.classes = np.unique(labels.col(0))
 
     def euclidean(self, p1, p2):
         summation = np.sum((p1 - p2)**2, axis=1)
@@ -46,6 +47,9 @@ class KNNLearner(SupervisedLearner):
         summation = np.sum(np.abs(p1-p2), axis=1)
         return summation
 
+    def calcWeights(self, distances, min_indices):
+        return (1/distances[min_indices])**2
+
     def predict(self, featureRow, out):
         """
         :type featureRow: [float]
@@ -53,7 +57,7 @@ class KNNLearner(SupervisedLearner):
         """
         ### Initialize k and other hyperparams. Can also wrap here to test multiple k's
         k = 3
-        weighting = False
+        weighting = True
         regression = False
 
         # TODO - remove this, just for testing
@@ -63,23 +67,31 @@ class KNNLearner(SupervisedLearner):
         distances = self.manhattan(np.array(featureRow), self.npFeatures)
         # argpartition sorts only k elements so its faster than a sort. Returns indices to the k minimum elements in ascending order
         min_indices = np.argpartition(distances, range(k))[:k] 
+        labelsOfKNN = self.npLabels[min_indices][:, 0]
 
-        pred = None
         ### k nearest instances vote on output class
         if(weighting):
             if (regression):
                 pass
             else:
-                pass
+                weightsKNN = self.calcWeights(distances, min_indices)
+                candidateClasses = np.unique(labelsOfKNN)
+                weightedVotes = np.zeros(len(candidateClasses))
+                print(weightsKNN)
+                print(labelsOfKNN)
+                for c in candidateClasses:
+                    indices = [i for i,l in enumerate(labelsOfKNN) if l == c]
+                    print('indices for {0}: '.format(c), indices)
+                    weightedVotes[int(c)] = np.sum(weightsKNN[indices])
+                pred = np.argmax(weightedVotes)
+                out.append(pred)
+
         else:
             if (regression):
                 pass
             else:
-                print(self.npLabels)
-                labelsOfKNeighbors = self.npLabels[min_indices]
-                print(labelsOfKNeighbors)
-                pred, _ = mode(labelsOfKNeighbors)
-                print(pred)
+                pred, _ = mode(labelsOfKNN)
+                out.append(pred[0])
                 
-        out.append(pred[0][0]) # the prediction is a double nested array because of toolkit stupidity
+        
 
