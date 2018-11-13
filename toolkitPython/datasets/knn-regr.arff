@@ -1,0 +1,9 @@
+@RELATION knn_regr
+@ATTRIBUTE x continuous
+@ATTRIBUTE y continuous
+@ATTRIBUTE T continuous
+@DATA
+.3,.8,5
+-.3,1.6,1
+.9,0,8
+1,1,13

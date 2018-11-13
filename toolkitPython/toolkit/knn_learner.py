@@ -66,8 +66,8 @@ class KNNLearner(SupervisedLearner):
         """
         ### Initialize k and other hyperparams. Can also wrap here to test multiple k's
         k = 3
-        weighting = True
-        regression = False
+        weighting = False
+        regression = True
 
         # TODO - remove this, just for testing
         featureRow = [.5, .2]
@@ -79,6 +79,7 @@ class KNNLearner(SupervisedLearner):
         labelsOfKNN = self.npLabels[min_indices][:, 0]
 
         ### k nearest instances vote on output class. Voting scheme depends on if you do weighted voting and if you want knn regression
+        pred = None
         if(weighting):
             weightedVotes = self.calcWeightedVotes(distances, min_indices, labelsOfKNN)
             if (regression):
@@ -86,15 +87,15 @@ class KNNLearner(SupervisedLearner):
             else:
                 # The highest weighted vote wins
                 pred = np.argmax(weightedVotes)
-                out.append(pred)
-
         else:
             if (regression):
-                pass
+                pred = np.mean(labelsOfKNN)
             else:
                 # The most frequent vote wins
                 pred, _ = mode(labelsOfKNN)
-                out.append(pred[0])
+                pred = pred[0]
+
+        out.append(pred)
                 
         
 

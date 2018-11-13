@@ -69,7 +69,7 @@ class MLSystemManager:
 
         if eval_method == "training":
 
-            print("Calculating accuracy on training set...")
+            print("Calculating metric (accuracy or MSE for regression) on training set...")
 
             features = Matrix(data, 0, 0, data.rows, data.cols-1) #TODO - change the 1 to be however many output nodes you need
             labels = Matrix(data, 0, data.cols-1, data.rows, 1)
@@ -78,8 +78,8 @@ class MLSystemManager:
             learner.train(features, labels)
             elapsed_time = time.time() - start_time
             print("Time to train (in seconds): {}".format(elapsed_time))
-            accuracy, _ = learner.measure_accuracy(features, labels, confusion)
-            print("Training set accuracy: " + str(accuracy))
+            metric, _ = learner.measure_accuracy(features, labels, confusion)
+            print("Training set metric: " + str(metric))
 
             if print_confusion_matrix:
                 print("\nConfusion matrix: (Row=target value, Col=predicted value)")

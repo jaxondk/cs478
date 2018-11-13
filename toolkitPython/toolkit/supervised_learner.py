@@ -58,7 +58,7 @@ class SupervisedLearner:
                 self.predict(feat, pred)
                 delta = targ[0] - pred[0]
                 sse += delta**2
-            return math.sqrt(sse / features.rows)
+            return math.sqrt(sse / features.rows), None
 
         else:
             # label is nominal, so measure predictive accuracy
