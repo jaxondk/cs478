@@ -38,6 +38,7 @@ class KNNLearner(SupervisedLearner):
         self.npFeatures = np.array(features.data)
         self.npLabels = np.array(labels.data)
         self.regression = labels.value_count(0) == 0
+        # self.dataRow = 16
 
     def euclidean(self, p1, p2):
         summation = np.sum((p1 - p2)**2, axis=1)
@@ -72,11 +73,11 @@ class KNNLearner(SupervisedLearner):
         """
         ### Initialize k and other hyperparams. Can also wrap here to test multiple k's
         k = 3
-        weighting = True
+        weighting = False
 
         ### Measure distance to all stored instances. Keep k nearest
         distances = self.manhattan(np.array(featureRow), self.npFeatures)
-        # argpartition sorts only k elements so its faster than a sort. Returns indices to the k minimum elements in ascending order
+        # argpartition sorts only k elements so it's faster than a sort. Returns indices to the k minimum elements in ascending order
         min_indices = np.argpartition(distances, range(k))[:k] 
         labelsOfKNN = self.npLabels[min_indices][:, 0]
 
@@ -97,7 +98,10 @@ class KNNLearner(SupervisedLearner):
                 # The most frequent vote wins
                 pred, _ = mode(labelsOfKNN)
                 pred = pred[0]
+                # print('Row: {0} | pred: {1}'.format(self.dataRow, pred))
 
+        # self.dataRow += 1
+        del out[:]
         out.append(pred)
                 
         
