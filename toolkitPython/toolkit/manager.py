@@ -68,18 +68,18 @@ class MLSystemManager:
               "Evaluation method: {}\n".format(file_name, data.rows, data.cols, learner_name, eval_method))
 
         if eval_method == "training":
-
-            print("Calculating metric (accuracy or MSE for regression) on training set...")
-
             features = Matrix(data, 0, 0, data.rows, data.cols-1) #TODO - change the 1 to be however many output nodes you need
             labels = Matrix(data, 0, data.cols-1, data.rows, 1)
+            metricType = 'RMSE' if (labels.value_count(0) == 0) else 'accuracy'
+            print("Calculating {0} on training set...".format(metricType))
+
             confusion = Matrix()
             start_time = time.time()
             learner.train(features, labels)
             elapsed_time = time.time() - start_time
             print("Time to train (in seconds): {}".format(elapsed_time))
             metric, _ = learner.measure_accuracy(features, labels, confusion)
-            print("Training set metric: " + str(metric))
+            print("Training set {0}: {1}".format(metricType,metric))
 
             if print_confusion_matrix:
                 print("\nConfusion matrix: (Row=target value, Col=predicted value)")
@@ -99,19 +99,22 @@ class MLSystemManager:
             features = Matrix(data, 0, 0, data.rows, data.cols-1)
             labels = Matrix(data, 0, data.cols-1, data.rows, 1)
 
+            metricType = 'RMSE' if (labels.value_count(0) == 0) else 'accuracy'
+            print("Calculating {0} on separate test set...".format(metricType))
+
             start_time = time.time()
             learner.train(features, labels)
             elapsed_time = time.time() - start_time
             print("Time to train (in seconds): {}".format(elapsed_time))
 
-            train_accuracy, _ = learner.measure_accuracy(features, labels)
-            print("Training set accuracy: {}".format(train_accuracy))
+            train_metric, _ = learner.measure_accuracy(features, labels)
+            print("Training set {0}: {1}".format(metricType, train_metric))
 
             test_features = Matrix(test_data, 0, 0, test_data.rows, test_data.cols-1)
             test_labels = Matrix(test_data, 0, test_data.cols-1, test_data.rows, 1)
             confusion = Matrix()
-            test_accuracy, _ = learner.measure_accuracy(test_features, test_labels, confusion)
-            print("Test set accuracy: {}".format(test_accuracy))
+            test_metric, _ = learner.measure_accuracy(test_features, test_labels, confusion)
+            print("Test set {0}: {1}".format(metricType, test_metric))
 
             if print_confusion_matrix:
                 print("\nConfusion matrix: (Row=target value, Col=predicted value)")
