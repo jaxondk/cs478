@@ -74,9 +74,6 @@ class KNNLearner(SupervisedLearner):
         k = 3
         weighting = True
 
-        # TODO - remove this, just for testing
-        featureRow = [.5, .2]
-
         ### Measure distance to all stored instances. Keep k nearest
         distances = self.manhattan(np.array(featureRow), self.npFeatures)
         # argpartition sorts only k elements so its faster than a sort. Returns indices to the k minimum elements in ascending order
