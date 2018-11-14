@@ -38,7 +38,6 @@ class KNNLearner(SupervisedLearner):
         self.npFeatures = np.array(features.data)
         self.npLabels = np.array(labels.data)
         self.regression = labels.value_count(0) == 0
-        # self.dataRow = 16
 
     def euclidean(self, p1, p2):
         summation = np.sum((p1 - p2)**2, axis=1)
@@ -98,9 +97,7 @@ class KNNLearner(SupervisedLearner):
                 # The most frequent vote wins
                 pred, _ = mode(labelsOfKNN)
                 pred = pred[0]
-                # print('Row: {0} | pred: {1}'.format(self.dataRow, pred))
 
-        # self.dataRow += 1
         del out[:]
         out.append(pred)
                 
