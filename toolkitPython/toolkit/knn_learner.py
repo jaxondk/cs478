@@ -53,7 +53,7 @@ class KNNLearner(SupervisedLearner):
     def calcWeightedVotes(self, distances, min_indices, labelsOfKNN):
         weightsKNN = self.calcWeights(distances, min_indices)
         candidateClasses = np.unique(labelsOfKNN)
-        weightedVotes = np.zeros(len(candidateClasses))
+        weightedVotes = {}
         for c in candidateClasses:
             indices = [i for i, l in enumerate(labelsOfKNN) if l == c]
             weightedVotes[int(c)] = np.sum(weightsKNN[indices])
@@ -70,7 +70,7 @@ class KNNLearner(SupervisedLearner):
         :type featureRow: [float]
         :type out: [float]. After predict f(x), len(out) = 1
         """
-        ### Initialize k and other hyperparams. Can also wrap here to test multiple k's
+        ### Choose k and if you want distance weighting. 
         k = 3
         weighting = False
 
@@ -88,7 +88,7 @@ class KNNLearner(SupervisedLearner):
             else:
                 # The highest weighted vote wins
                 weightedVotes = self.calcWeightedVotes(distances, min_indices, labelsOfKNN)
-                pred = np.argmax(weightedVotes)
+                pred = max(weightedVotes, key=weightedVotes.get)
         else:
             if (self.regression):
                 # Output the mean of the continuous labels
