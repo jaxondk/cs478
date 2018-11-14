@@ -37,7 +37,7 @@ class KNNLearner(SupervisedLearner):
         # TODO - do some reduction here to make training set smaller
         self.npFeatures = np.array(features.data)
         self.npLabels = np.array(labels.data)
-        self.classes = np.unique(labels.col(0))
+        self.regression = labels.value_count(0) == 0
 
     def euclidean(self, p1, p2):
         summation = np.sum((p1 - p2)**2, axis=1)
@@ -73,7 +73,6 @@ class KNNLearner(SupervisedLearner):
         ### Initialize k and other hyperparams. Can also wrap here to test multiple k's
         k = 3
         weighting = True
-        regression = True
 
         # TODO - remove this, just for testing
         featureRow = [.5, .2]
@@ -87,14 +86,14 @@ class KNNLearner(SupervisedLearner):
         ### k nearest instances vote on output class. Voting scheme depends on if you do weighted voting and if you want knn regression
         pred = None
         if(weighting):
-            if (regression):
+            if (self.regression):
                 pred = self.predictWeightedRegression(distances, min_indices, labelsOfKNN)
             else:
                 # The highest weighted vote wins
                 weightedVotes = self.calcWeightedVotes(distances, min_indices, labelsOfKNN)
                 pred = np.argmax(weightedVotes)
         else:
-            if (regression):
+            if (self.regression):
                 # Output the mean of the continuous labels
                 pred = np.mean(labelsOfKNN)
             else:
