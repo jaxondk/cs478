@@ -49,12 +49,15 @@ class KNNLearner(SupervisedLearner):
     DEALING WITH NOMINAL AND MISSING VALUES
     After finding the difference between training instances and feature row, 
     any nominal columns with diff 0 stay 0, otherwise should be 1.
-    For missing/unknown, if it's infinity replace with a 1
+    For missing/unknown (inf), replace with median diff for that attribute. --> My modification to HEOM
     '''
     # Heterogeneous Euclidean-Overlap Metric, from "Improved Heterogeneous Distance Functions", Journal of Artificial Intelligence Research 6 (1997) 1-34
     def heom(self, p1, storedInstances):
         diff = p1 - storedInstances
-        diff[diff == np.inf] = 1
+        medians = np.median(diff, axis=0)
+        for a in range(len(p1)):
+            diff[:, a][np.abs(diff[:, a]) == np.inf] = medians[a]
+
         nominalDiffs = diff[:,self.nominalColumns]
         nominalDiffs[nominalDiffs != 0] = 1
         diff[:, self.nominalColumns] = nominalDiffs
@@ -94,7 +97,7 @@ class KNNLearner(SupervisedLearner):
         """
         ### Choose k and if you want distance weighting. 
         k = 3
-        weighting = False
+        weighting = True
 
         ### Measure distance to all stored instances. Keep k nearest
         distances = self.heom(np.array(featureRow), self.npFeatures)
