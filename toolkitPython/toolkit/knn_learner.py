@@ -44,7 +44,6 @@ class KNNLearner(SupervisedLearner):
             if(features.value_count(c) != 0):
                 self.nominalColumns.append(c)
         self.nominalColumns = np.array(self.nominalColumns)
-        print(self.nominalColumns)
 
     ''' 
     DEALING WITH NOMINAL AND MISSING VALUES
