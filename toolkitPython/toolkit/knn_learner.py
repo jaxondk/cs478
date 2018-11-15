@@ -38,13 +38,36 @@ class KNNLearner(SupervisedLearner):
         self.npFeatures = np.array(features.data)
         self.npLabels = np.array(labels.data)
         self.regression = labels.value_count(0) == 0
+        # TODO - determine which columns are nominal here in same manner as above
+        self.nominalColumns = []
+        for c in range(features.cols):
+            if(features.value_count(c) != 0):
+                self.nominalColumns.append(c)
+        self.nominalColumns = np.array(self.nominalColumns)
+        print(self.nominalColumns)
 
-    def euclidean(self, p1, p2):
-        summation = np.sum((p1 - p2)**2, axis=1)
+    ''' 
+    DEALING WITH NOMINAL AND MISSING VALUES
+    After finding the difference between training instances and feature row, 
+    any nominal columns with diff 0 stay 0, otherwise should be 1.
+    For missing/unknown, if it's infinity replace with a 1
+    '''
+    # Heterogeneous Euclidean-Overlap Metric, from "Improved Heterogeneous Distance Functions", Journal of Artificial Intelligence Research 6 (1997) 1-34
+    def heom(self, p1, storedInstances):
+        diff = p1 - storedInstances
+        diff[diff == np.inf] = 1
+        nominalDiffs = diff[:,self.nominalColumns]
+        nominalDiffs[nominalDiffs != 0] = 1
+        diff[:, self.nominalColumns] = nominalDiffs
+        summation = np.sum(diff**2, axis = 1)
         return np.sqrt(summation)
 
-    def manhattan(self, p1, p2):
-        summation = np.sum(np.abs(p1-p2), axis=1)
+    def euclidean(self, p1, storedInstances):
+        summation = np.sum((p1 - storedInstances)**2, axis=1)
+        return np.sqrt(summation)
+
+    def manhattan(self, p1, storedInstances):
+        summation = np.sum(np.abs(p1-storedInstances), axis=1)
         return summation
 
     def calcWeights(self, distances, min_indices):
@@ -64,7 +87,7 @@ class KNNLearner(SupervisedLearner):
         numer = np.sum(weights * labelsOfKNN)
         denom = np.sum(weights)
         return numer/denom
-
+    
     def predict(self, featureRow, out):
         """
         :type featureRow: [float]
@@ -75,7 +98,7 @@ class KNNLearner(SupervisedLearner):
         weighting = False
 
         ### Measure distance to all stored instances. Keep k nearest
-        distances = self.manhattan(np.array(featureRow), self.npFeatures)
+        distances = self.heom(np.array(featureRow), self.npFeatures)
         # argpartition sorts only k elements so it's faster than a sort. Returns indices to the k minimum elements in ascending order
         min_indices = np.argpartition(distances, range(k))[:k] 
         labelsOfKNN = self.npLabels[min_indices][:, 0]
