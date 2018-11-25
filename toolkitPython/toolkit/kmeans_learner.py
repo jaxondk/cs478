@@ -34,7 +34,7 @@ class KmeansLearner(SupervisedLearner):
         :type labels: Matrix
         """
         self.npFeatures = np.array(features.data)
-        
+
         ### Discover nominal columns for handling distance of nominal attributes
         self.nominalColumns = []
         for c in range(features.cols):
@@ -43,37 +43,60 @@ class KmeansLearner(SupervisedLearner):
         self.nominalColumns = np.array(self.nominalColumns)
 
         ### Choose k and initialize starting centroids
-        k = 5
+        self.k = 5
+        print('K={0}'.format(self.k))
         randomize = False
-        centroids = np.zeros((k, features.cols))
+        centroids = np.zeros((self.k, features.cols))
         if(randomize):
-            for c in range(k):
+            for c in range(self.k):
                 centroids[c] = features.row(randint(0, features.rows-1))
         else:
-            firstKFeatures = Matrix(features, 0, 0, k, features.cols)
+            firstKFeatures = Matrix(features, 0, 0, self.k, features.cols)
             centroids = np.array(firstKFeatures.data)
 
         ### K-means algorithm
-        prev_SSE = np.inf
-        current_SSE = 999999999
-        distancesFromCentroid = np.zeros((k, features.rows))
-        # clusters = np.full((k, features.rows), False) # point p is a member of cluster c if clusters[c,p] = True
-        while(current_SSE != prev_SSE):
-            # Get the distances from each centroid for every point
-            for c in range(k):
+        distancesFromCentroid = np.zeros((self.k, features.rows))
+        current_SSE = np.inf
+        i = 0
+        while(True):
+            # Get the distances from each centroid for every point and assign each point to its closest (minimum distance) cluster
+            for c in range(self.k):
                 distancesFromCentroid[c] = self.heom(centroids[c], self.npFeatures)
-
-            # Assign each point to its closest (minimum distance) cluster and recalculate centroids
             clusterAssignments = np.argmin(distancesFromCentroid, axis=0)
-            for c in range(k):
-                currentClusterPtIndices = np.where(clusterAssignments == c)[0]
-                currentCluster = self.npFeatures[currentClusterPtIndices]
-                centroids[c] = self.calcCentroid(currentCluster)
 
             # Update SSE
-            print('centroids', centroids)
-            input('pause')
+            prev_SSE = current_SSE
+            current_SSE, clusterSSEs = self.calcSSE(distancesFromCentroid, clusterAssignments)
+            self.printIteration(i, centroids, clusterAssignments, current_SSE, clusterSSEs)
+            if(current_SSE == prev_SSE):
+                break
 
+            # Calc next centroids
+            next_centroids = np.zeros((self.k, features.cols))
+            for c in range(self.k):
+                currentClusterPtIndices = np.where(clusterAssignments == c)[0]
+                currentCluster = self.npFeatures[currentClusterPtIndices]
+                next_centroids[c] = self.calcCentroid(currentCluster)
+
+            centroids = next_centroids
+            i += 1
+
+    def printIteration(self, i, centroids, clusterAssignments, current_SSE, clusterSSEs):
+        print('------- Iteration {0} -------'.format(i))
+        for c in range(self.k):
+            print('--- Cluster {0} ---'.format(c))
+            print('Centroid:', centroids[c])
+            print('Size of cluster: ', len(np.where(clusterAssignments == c)[0]))
+            print('SSE of cluster: ', clusterSSEs[c])
+        print('Total SSE of Iteration: ', current_SSE)
+
+    def calcSSE(self, distances, clusterAssignments):
+        clusterSSEs = np.zeros(self.k)
+        for c in range(self.k):
+            currentClusterPtIndices = np.where(clusterAssignments == c)[0]
+            clusterSSEs[c] = np.sum(distances[c, currentClusterPtIndices])
+        return np.sum(clusterSSEs), clusterSSEs
+    
     def calcCentroid(self, currentCluster):
         # Calculate average of each attribute for cluster (ignoring unknowns)
         currentCluster_masked = np.ma.masked_where(currentCluster == np.inf, currentCluster)
