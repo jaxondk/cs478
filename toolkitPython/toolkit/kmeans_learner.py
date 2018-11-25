@@ -86,6 +86,8 @@ class KmeansLearner(SupervisedLearner):
         for c in range(self.k):
             print('--- Cluster {0} ---'.format(c))
             print('Centroid:', centroids[c])
+            print(np.where(clusterAssignments == c)[0])
+            input('pause')
             print('Size of cluster: ', len(np.where(clusterAssignments == c)[0]))
             print('SSE of cluster: ', clusterSSEs[c])
         print('Total SSE of Iteration: ', current_SSE)
