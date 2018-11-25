@@ -57,7 +57,7 @@ class KmeansLearner(SupervisedLearner):
         ### K-means algorithm
         distancesFromCentroid = np.zeros((self.k, features.rows))
         current_SSE = np.inf
-        i = 0
+        i = 1
         while(True):
             # Get the distances from each centroid for every point and assign each point to its closest (minimum distance) cluster
             for c in range(self.k):
@@ -69,6 +69,8 @@ class KmeansLearner(SupervisedLearner):
             current_SSE, clusterSSEs = self.calcSSE(distancesFromCentroid, clusterAssignments)
             self.printIteration(i, centroids, clusterAssignments, current_SSE, clusterSSEs)
             if(current_SSE == prev_SSE):
+                print('SSE has converged at iteration', i)
+                input('')
                 break
 
             # Calc next centroids
@@ -86,8 +88,6 @@ class KmeansLearner(SupervisedLearner):
         for c in range(self.k):
             print('--- Cluster {0} ---'.format(c))
             print('Centroid:', centroids[c])
-            print(np.where(clusterAssignments == c)[0])
-            input('pause')
             print('Size of cluster: ', len(np.where(clusterAssignments == c)[0]))
             print('SSE of cluster: ', clusterSSEs[c])
         print('Total SSE of Iteration: ', current_SSE)
