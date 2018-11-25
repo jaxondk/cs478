@@ -33,6 +33,7 @@ class KmeansLearner(SupervisedLearner):
         :type features: Matrix
         :type labels: Matrix
         """
+        self.outfile = open('kmeans.out', 'a')
         self.npFeatures = np.array(features.data)
 
         ### Discover nominal columns for handling distance of nominal attributes
@@ -43,21 +44,26 @@ class KmeansLearner(SupervisedLearner):
         self.nominalColumns = np.array(self.nominalColumns)
 
         ### Choose k and initialize starting centroids
-        self.k = 5
+        self.k = 7
         print('K={0}'.format(self.k))
-        randomize = False
-        centroids = np.zeros((self.k, features.cols))
+        self.outfile.write('K={0}\n'.format(self.k))
+        randomize = True
+        initial_centroids = np.zeros((self.k, features.cols))
         if(randomize):
             for c in range(self.k):
-                centroids[c] = features.row(randint(0, features.rows-1))
+                initial_centroids[c] = features.row(randint(0, features.rows-1))
         else:
             firstKFeatures = Matrix(features, 0, 0, self.k, features.cols)
-            centroids = np.array(firstKFeatures.data)
+            initial_centroids = np.array(firstKFeatures.data)
 
-        ### K-means algorithm
-        distancesFromCentroid = np.zeros((self.k, features.rows))
+        self.kmeans(initial_centroids)
+        self.outfile.close()
+
+    def kmeans(self, initial_centroids):
+        distancesFromCentroid = np.zeros((self.k, len(self.npFeatures)))
         current_SSE = np.inf
         i = 1
+        centroids = initial_centroids
         while(True):
             # Get the distances from each centroid for every point and assign each point to its closest (minimum distance) cluster
             for c in range(self.k):
@@ -70,11 +76,10 @@ class KmeansLearner(SupervisedLearner):
             self.printIteration(i, centroids, clusterAssignments, current_SSE, clusterSSEs)
             if(current_SSE == prev_SSE):
                 print('SSE has converged at iteration', i)
-                input('')
                 break
 
             # Calc next centroids
-            next_centroids = np.zeros((self.k, features.cols))
+            next_centroids = np.zeros_like(centroids)
             for c in range(self.k):
                 currentClusterPtIndices = np.where(clusterAssignments == c)[0]
                 currentCluster = self.npFeatures[currentClusterPtIndices]
@@ -82,7 +87,7 @@ class KmeansLearner(SupervisedLearner):
 
             centroids = next_centroids
             i += 1
-
+    
     def printIteration(self, i, centroids, clusterAssignments, current_SSE, clusterSSEs):
         print('------- Iteration {0} -------'.format(i))
         for c in range(self.k):
@@ -91,6 +96,7 @@ class KmeansLearner(SupervisedLearner):
             print('Size of cluster: ', len(np.where(clusterAssignments == c)[0]))
             print('SSE of cluster: ', clusterSSEs[c])
         print('Total SSE of Iteration: ', current_SSE)
+        self.outfile.write('Total SSE of Iteration {0} = {1}\n'.format(i, current_SSE))
 
     def calcSSE(self, distances, clusterAssignments):
         clusterSSEs = np.zeros(self.k)
@@ -104,7 +110,8 @@ class KmeansLearner(SupervisedLearner):
         currentCluster_masked = np.ma.masked_where(currentCluster == np.inf, currentCluster)
         centroid = np.average(currentCluster_masked, axis=0)
         # Replace avgs for nominal attributes with their modes
-        centroid[self.nominalColumns], _ = mode(currentCluster_masked[:,self.nominalColumns])
+        if(len(self.nominalColumns) > 0):
+            centroid[self.nominalColumns], _ = mode(currentCluster_masked[:,self.nominalColumns])
         centroid.fill_value = np.inf
         return centroid.filled() # unmask so we have inf back
 
@@ -113,9 +120,10 @@ class KmeansLearner(SupervisedLearner):
         diff = p1 - storedInstances
         diff[np.abs(diff) == np.inf] = 1
         diff[np.isnan(diff)] = 1 # NaN's will come up if inf - inf occurs 
-        nominalDiffs = diff[:,self.nominalColumns]
-        nominalDiffs[nominalDiffs != 0] = 1
-        diff[:, self.nominalColumns] = nominalDiffs
+        if(len(self.nominalColumns) > 0):
+            nominalDiffs = diff[:,self.nominalColumns]
+            nominalDiffs[nominalDiffs != 0] = 1
+            diff[:, self.nominalColumns] = nominalDiffs
         summation = np.sum(diff**2, axis = 1)
         return np.sqrt(summation)
     
@@ -125,7 +133,7 @@ class KmeansLearner(SupervisedLearner):
         :type out: [float]. After predict f(x), len(out) = 1
         """
         
-        pred = None
+        pred = 1
 
         del out[:]
         out.append(pred)
