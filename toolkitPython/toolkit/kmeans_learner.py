@@ -44,10 +44,10 @@ class KmeansLearner(SupervisedLearner):
         self.nominalColumns = np.array(self.nominalColumns)
 
         ### Choose k and initialize starting centroids
-        self.k = 7
+        self.k = 5
+        randomize = True
         print('K={0}'.format(self.k))
         self.outfile.write('K={0}\n'.format(self.k))
-        randomize = True
         initial_centroids = np.zeros((self.k, features.cols))
         if(randomize):
             for c in range(self.k):
@@ -100,9 +100,10 @@ class KmeansLearner(SupervisedLearner):
 
     def calcSSE(self, distances, clusterAssignments):
         clusterSSEs = np.zeros(self.k)
+        distances_sqd = distances**2
         for c in range(self.k):
             currentClusterPtIndices = np.where(clusterAssignments == c)[0]
-            clusterSSEs[c] = np.sum(distances[c, currentClusterPtIndices])
+            clusterSSEs[c] = np.sum(distances_sqd[c, currentClusterPtIndices])
         return np.sum(clusterSSEs), clusterSSEs
     
     def calcCentroid(self, currentCluster):
