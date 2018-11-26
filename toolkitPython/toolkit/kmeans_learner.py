@@ -45,7 +45,7 @@ class KmeansLearner(SupervisedLearner):
 
         ### Choose k and initialize starting centroids
         self.k = 5
-        randomize = True
+        randomize = False
         print('K={0}'.format(self.k))
         self.outfile.write('K={0}\n'.format(self.k))
         initial_centroids = np.zeros((self.k, features.cols))
@@ -61,54 +61,56 @@ class KmeansLearner(SupervisedLearner):
 
     def kmeans(self, initial_centroids):
         distancesFromCentroid = np.zeros((self.k, len(self.npFeatures)))
-        current_SSE = np.inf
+        iteration_SSE = np.inf
         i = 1
         centroids = initial_centroids
         while(True):
             # Get the distances from each centroid for every point and assign each point to its closest (minimum distance) cluster
             for c in range(self.k):
                 distancesFromCentroid[c] = self.heom(centroids[c], self.npFeatures)
-            clusterAssignments = np.argmin(distancesFromCentroid, axis=0)
+            cluster_assignments = np.argmin(distancesFromCentroid, axis=0)
+            cluster_indices = []
+            for c in range(self.k):
+                curr_cluster_indices = np.where(cluster_assignments == c)[0]
+                cluster_indices.append(curr_cluster_indices)
 
             # Update SSE
-            prev_SSE = current_SSE
-            current_SSE, clusterSSEs = self.calcSSE(distancesFromCentroid, clusterAssignments)
-            self.printIteration(i, centroids, clusterAssignments, current_SSE, clusterSSEs)
-            if(current_SSE == prev_SSE):
+            prev_SSE = iteration_SSE
+            iteration_SSE, cluster_SSEs = self.calcSSE(distancesFromCentroid, cluster_indices)
+            self.printIteration(i, centroids, cluster_indices, iteration_SSE, cluster_SSEs)
+            if(iteration_SSE == prev_SSE):
                 print('SSE has converged at iteration', i)
                 break
 
             # Calc next centroids
             next_centroids = np.zeros_like(centroids)
             for c in range(self.k):
-                currentClusterPtIndices = np.where(clusterAssignments == c)[0]
-                currentCluster = self.npFeatures[currentClusterPtIndices]
-                next_centroids[c] = self.calcCentroid(currentCluster)
+                curr_cluster = self.npFeatures[cluster_indices[c]]
+                next_centroids[c] = self.calcCentroid(curr_cluster)
 
             centroids = next_centroids
             i += 1
     
-    def printIteration(self, i, centroids, clusterAssignments, current_SSE, clusterSSEs):
+    def printIteration(self, i, centroids, cluster_indices, iteration_SSE, cluster_SSEs):
         print('------- Iteration {0} -------'.format(i))
         for c in range(self.k):
             print('--- Cluster {0} ---'.format(c))
             print('Centroid:', centroids[c])
-            print('Size of cluster: ', len(np.where(clusterAssignments == c)[0]))
-            print('SSE of cluster: ', clusterSSEs[c])
-        print('Total SSE of Iteration: ', current_SSE)
-        self.outfile.write('Total SSE of Iteration {0} = {1}\n'.format(i, current_SSE))
-
-    def calcSSE(self, distances, clusterAssignments):
-        clusterSSEs = np.zeros(self.k)
+            print('Size of cluster: ', len(cluster_indices[c]))
+            print('SSE of cluster: ', cluster_SSEs[c])
+        print('Total SSE of Iteration: ', iteration_SSE)
+        self.outfile.write('Total SSE of Iteration {0} = {1}\n'.format(i, iteration_SSE))
+    
+    def calcSSE(self, distances, cluster_indices):
+        cluster_SSEs = np.zeros(self.k)
         distances_sqd = distances**2
         for c in range(self.k):
-            currentClusterPtIndices = np.where(clusterAssignments == c)[0]
-            clusterSSEs[c] = np.sum(distances_sqd[c, currentClusterPtIndices])
-        return np.sum(clusterSSEs), clusterSSEs
+            cluster_SSEs[c] = np.sum(distances_sqd[c, cluster_indices[c]])
+        return np.sum(cluster_SSEs), cluster_SSEs
     
-    def calcCentroid(self, currentCluster):
+    def calcCentroid(self, curr_cluster):
         # Calculate average of each attribute for cluster (ignoring unknowns)
-        currentCluster_masked = np.ma.masked_where(currentCluster == np.inf, currentCluster)
+        currentCluster_masked = np.ma.masked_where(curr_cluster == np.inf, curr_cluster)
         centroid = np.average(currentCluster_masked, axis=0)
         # Replace avgs for nominal attributes with their modes
         if(len(self.nominalColumns) > 0):
