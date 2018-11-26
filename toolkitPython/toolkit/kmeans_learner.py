@@ -44,7 +44,7 @@ class KmeansLearner(SupervisedLearner):
         self.nominalColumns = np.array(self.nominalColumns)
 
         ### Choose k and initialize starting centroids
-        self.k = 5
+        self.k = 2
         randomize = False
         print('K={0}'.format(self.k))
         self.outfile.write('K={0}\n'.format(self.k))
@@ -74,9 +74,10 @@ class KmeansLearner(SupervisedLearner):
                 curr_cluster_indices = np.where(cluster_assignments == c)[0]
                 cluster_indices.append(curr_cluster_indices)
 
-            # Update SSE
+            # Calc metrics (SSE and silhouette score)
             prev_SSE = iteration_SSE
             iteration_SSE, cluster_SSEs = self.calcSSE(distancesFromCentroid, cluster_indices)
+            iteration_silhouette_score, cluster_silhouette_score = self.calcSilhouetteScore(cluster_assignments, cluster_indices)
             self.printIteration(i, centroids, cluster_indices, iteration_SSE, cluster_SSEs)
             if(iteration_SSE == prev_SSE):
                 print('SSE has converged at iteration', i)
@@ -107,7 +108,36 @@ class KmeansLearner(SupervisedLearner):
         for c in range(self.k):
             cluster_SSEs[c] = np.sum(distances_sqd[c, cluster_indices[c]])
         return np.sum(cluster_SSEs), cluster_SSEs
-    
+
+    def calcSilhouetteScore(self, cluster_assignments, cluster_indices):
+        a_vals = self.calcAVals(cluster_assignments, cluster_indices)
+        b_vals = self.calcBVals(cluster_indices)
+        input('pause')
+        
+        # Calc a and b for instances in each cluster
+        # cluster_silhouette_scores = np.zeros(self.k)
+        
+        # return np.sum(cluster_silhouette_scores), cluster_silhouette_scores
+
+    def calcAVals(self, cluster_assignments, cluster_indices):
+        a_vals = np.zeros(len(self.npFeatures))
+        for i in range(len(self.npFeatures)):
+            c = cluster_assignments[i]
+            distances = self.heom(self.npFeatures[i], self.npFeatures[cluster_indices[c]])
+            a_vals[i] = np.average(distances)
+        return a_vals
+
+        # for c in range(self.k):
+        #     curr_cluster = cluster_indices[0]
+        #     distances = np.zeros((len(curr_cluster), len(curr_cluster)))
+        #     for i in range(len(curr_cluster)):
+        #         distances[i] = self.heom(self.npFeatures[curr_cluster[i]], self.npFeatures[curr_cluster])
+        #     print('curr_a for cluster {0}: {1}'.format(c, distances))
+        #     input('pause')
+
+    def calcBVals(self, cluster_indices):
+        pass
+
     def calcCentroid(self, curr_cluster):
         # Calculate average of each attribute for cluster (ignoring unknowns)
         currentCluster_masked = np.ma.masked_where(curr_cluster == np.inf, curr_cluster)
