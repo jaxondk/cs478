@@ -111,11 +111,9 @@ class KmeansLearner(SupervisedLearner):
 
     def calcSilhouetteScore(self, cluster_assignments, cluster_indices):
         a_vals = self.calcAVals(cluster_assignments, cluster_indices)
-        b_vals = self.calcBVals(cluster_indices)
+        b_vals = self.calcBVals(cluster_assignments, cluster_indices)
+        print(b_vals.shape)
         input('pause')
-        
-        # Calc a and b for instances in each cluster
-        # cluster_silhouette_scores = np.zeros(self.k)
         
         # return np.sum(cluster_silhouette_scores), cluster_silhouette_scores
 
@@ -127,16 +125,17 @@ class KmeansLearner(SupervisedLearner):
             a_vals[i] = np.average(distances)
         return a_vals
 
-        # for c in range(self.k):
-        #     curr_cluster = cluster_indices[0]
-        #     distances = np.zeros((len(curr_cluster), len(curr_cluster)))
-        #     for i in range(len(curr_cluster)):
-        #         distances[i] = self.heom(self.npFeatures[curr_cluster[i]], self.npFeatures[curr_cluster])
-        #     print('curr_a for cluster {0}: {1}'.format(c, distances))
-        #     input('pause')
-
-    def calcBVals(self, cluster_indices):
-        pass
+    def calcBVals(self, cluster_assignments, cluster_indices):
+        b_vals = np.zeros(len(self.npFeatures))
+        for i in range(len(self.npFeatures)):
+            candidates = []
+            for c in range(self.k):
+                if(c == cluster_assignments[i]):
+                    continue
+                distances = self.heom(self.npFeatures[i], self.npFeatures[cluster_indices[c]])
+                candidates.append(np.average(distances))
+            b_vals[i] = min(candidates)
+        return b_vals
 
     def calcCentroid(self, curr_cluster):
         # Calculate average of each attribute for cluster (ignoring unknowns)
