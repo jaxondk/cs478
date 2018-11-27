@@ -44,17 +44,17 @@ class KmeansLearner(SupervisedLearner):
         self.nominalColumns = np.array(self.nominalColumns)
 
         ### Choose hyperparameters
-        self.k = 3
+        self.k = 5
         self.randomize = True
-        self.silhouette = False
+        self.silhouette = True
 
         print('K={0}'.format(self.k))
         self.outfile.write('K={0}\n'.format(self.k))
 
-        self.kmeans(features)
+        self.kmedians(features)
         self.outfile.close()
 
-    def kmeans(self, features):
+    def kmedians(self, features):
         ### Initialize centroids
         initial_centroids = np.zeros((self.k, features.cols))
         if(self.randomize):
@@ -148,9 +148,9 @@ class KmeansLearner(SupervisedLearner):
         return b_vals
 
     def calcCentroid(self, curr_cluster):
-        # Calculate average of each attribute for cluster (ignoring unknowns)
+        # Calculate median of each attribute for cluster (ignoring unknowns)
         currentCluster_masked = np.ma.masked_where(curr_cluster == np.inf, curr_cluster)
-        centroid = np.average(currentCluster_masked, axis=0)
+        centroid = np.median(currentCluster_masked, axis=0)
         # Replace avgs for nominal attributes with their modes
         if(len(self.nominalColumns) > 0):
             centroid[self.nominalColumns], _ = mode(currentCluster_masked[:,self.nominalColumns])
@@ -161,14 +161,25 @@ class KmeansLearner(SupervisedLearner):
     def heom(self, p1, storedInstances):
         diff = p1 - storedInstances
         diff[np.abs(diff) == np.inf] = 1
+        diff[np.isnan(diff)] = 1  # NaN's will come up if inf - inf occurs
+        if(len(self.nominalColumns) > 0):
+            nominalDiffs = diff[:, self.nominalColumns]
+            nominalDiffs[nominalDiffs != 0] = 1
+            diff[:, self.nominalColumns] = nominalDiffs
+        summation = np.sum(diff**2, axis=1)
+        return np.sqrt(summation)
+
+    def heteroManhattan(self, p1, storedInstances):
+        diff = p1 - storedInstances
+        diff[np.abs(diff) == np.inf] = 1
         diff[np.isnan(diff)] = 1 # NaN's will come up if inf - inf occurs 
         if(len(self.nominalColumns) > 0):
             nominalDiffs = diff[:,self.nominalColumns]
             nominalDiffs[nominalDiffs != 0] = 1
             diff[:, self.nominalColumns] = nominalDiffs
-        summation = np.sum(diff**2, axis = 1)
-        return np.sqrt(summation)
-    
+        summation = np.sum(np.abs(diff), axis = 1)
+        return summation
+
     def predict(self, featureRow, out):
         """
         :type featureRow: [float]
