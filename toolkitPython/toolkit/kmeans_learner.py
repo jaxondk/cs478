@@ -43,27 +43,34 @@ class KmeansLearner(SupervisedLearner):
                 self.nominalColumns.append(c)
         self.nominalColumns = np.array(self.nominalColumns)
 
-        ### Choose k and initialize starting centroids
-        self.k = 2
-        randomize = False
+        ### Choose hyperparameters
+        self.k = 3
+        self.randomize = True
+        self.silhouette = False
+
         print('K={0}'.format(self.k))
         self.outfile.write('K={0}\n'.format(self.k))
+
+        self.kmeans(features)
+        self.outfile.close()
+
+    def kmeans(self, features):
+        ### Initialize centroids
         initial_centroids = np.zeros((self.k, features.cols))
-        if(randomize):
+        if(self.randomize):
             for c in range(self.k):
-                initial_centroids[c] = features.row(randint(0, features.rows-1))
+                initial_centroids[c] = features.row(
+                    randint(0, features.rows-1))
         else:
             firstKFeatures = Matrix(features, 0, 0, self.k, features.cols)
             initial_centroids = np.array(firstKFeatures.data)
 
-        self.kmeans(initial_centroids)
-        self.outfile.close()
-
-    def kmeans(self, initial_centroids):
+        ### Cluster until convergence
         distancesFromCentroid = np.zeros((self.k, len(self.npFeatures)))
         iteration_SSE = np.inf
         i = 1
         centroids = initial_centroids
+        silhouette_scores = []
         while(True):
             # Get the distances from each centroid for every point and assign each point to its closest (minimum distance) cluster
             for c in range(self.k):
@@ -77,7 +84,8 @@ class KmeansLearner(SupervisedLearner):
             # Calc metrics (SSE and silhouette score)
             prev_SSE = iteration_SSE
             iteration_SSE, cluster_SSEs = self.calcSSE(distancesFromCentroid, cluster_indices)
-            iteration_silhouette_score, cluster_silhouette_score = self.calcSilhouetteScore(cluster_assignments, cluster_indices)
+            if(self.silhouette):
+                silhouette_scores.append(self.calcSilhouetteScore(cluster_assignments, cluster_indices))
             self.printIteration(i, centroids, cluster_indices, iteration_SSE, cluster_SSEs)
             if(iteration_SSE == prev_SSE):
                 print('SSE has converged at iteration', i)
@@ -91,6 +99,10 @@ class KmeansLearner(SupervisedLearner):
 
             centroids = next_centroids
             i += 1
+        if(self.silhouette):
+            score = np.average(silhouette_scores)
+            print('Silhouette score: {0}'.format(score))
+            self.outfile.write('Silhouette score: {0}\n'.format(score))
     
     def printIteration(self, i, centroids, cluster_indices, iteration_SSE, cluster_SSEs):
         print('------- Iteration {0} -------'.format(i))
@@ -112,10 +124,8 @@ class KmeansLearner(SupervisedLearner):
     def calcSilhouetteScore(self, cluster_assignments, cluster_indices):
         a_vals = self.calcAVals(cluster_assignments, cluster_indices)
         b_vals = self.calcBVals(cluster_assignments, cluster_indices)
-        print(b_vals.shape)
-        input('pause')
-        
-        # return np.sum(cluster_silhouette_scores), cluster_silhouette_scores
+        s_scores = (b_vals - a_vals) / np.maximum(a_vals, b_vals)
+        return np.average(s_scores)
 
     def calcAVals(self, cluster_assignments, cluster_indices):
         a_vals = np.zeros(len(self.npFeatures))
